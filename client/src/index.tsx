@@ -5,7 +5,7 @@ import './index.css';
 
 ReactDOM.render(
   <>
-    <App id={'a'} width={window.innerWidth} height={window.innerHeight / 2} />
+    <App width={window.innerWidth} height={window.innerHeight} />
   </>,
   document.getElementById('root')
 );

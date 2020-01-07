@@ -1,9 +1,10 @@
-import {sendMessagesToClient} from '../../../client/src/utils/fake-socket';
 import {ClientToServerMessage, ServerToClientMessage} from '../../../common/src/models/messages';
 import {ColorUtils} from '../../../common/src/utils/colorUtils';
 import {MathUtils} from '../../../common/src/utils/mathUtils';
 import {unreachable} from '../../../common/src/utils/unreachable';
+import {Utils} from '../../../common/src/utils/utils';
 import {uuid} from '../../../common/src/utils/uuid';
+import {ServerSocket} from '../serverSocket';
 import {ServerDeadEmitter} from './serverDeadEmitter';
 import {ServerDotEmitter} from './serverDotEmitter';
 import {ServerDotSwarm} from './serverDotSwarm';
@@ -15,31 +16,65 @@ export class ServerGame {
   gameWidth: number = 0;
   gameHeight: number = 0;
 
-  clients: {connectionId: string; teamId: string; color: string}[] = [];
+  teams: {connectionId: string; teamId: string; color: string}[] = [];
 
-  constructor() {
+  constructor(private serverSocket: ServerSocket) {
+    serverSocket.start(
+      connectionId => {},
+      connectionId => {
+        this.clientLeave(connectionId);
+      },
+      (connectionId, message) => {
+        this.processMessage(connectionId, message);
+      }
+    );
+  }
+
+  init() {
+    this.gameHeight = this.gameWidth = 5000;
+    for (let i = 0; i < 100; i++) {
+      const {x, y} = this.getSafePosition();
+      this.addNewDeadEmitter(x, y, 2);
+    }
+
     let serverTick = 0;
     setInterval(() => {
       this.serverTick(++serverTick, 1000 / 5);
     }, 1000 / 5);
   }
 
-  init() {
-    this.gameHeight = this.gameWidth = 1000;
-    for (let i = 0; i < 10; i++) {
-      const {x, y} = this.getSafePosition();
-      this.addNewDeadEmitter(x, y, 2);
-    }
-  }
-
   getSafePosition() {
     while (true) {
       const x = Math.round(MathUtils.randomPad(this.gameWidth, 0.05));
       const y = Math.round(MathUtils.randomPad(this.gameHeight, 0.05));
-      if (this.isSafePosition(x, y, 200)) {
+      if (this.isSafePosition(x, y, 300)) {
         return {x, y};
       }
     }
+  }
+
+  clientLeave(connectionId: string) {
+    const client = this.teams.find(c => c.connectionId === connectionId);
+    if (!client) {
+      return;
+    }
+    this.teams.splice(this.teams.indexOf(client), 1);
+    for (let i = this.swarms.length - 1; i >= 0; i--) {
+      const swarm = this.swarms[i];
+      if (swarm.teamId === client.teamId) {
+        this.removeSwarm(swarm.swarmId);
+      }
+    }
+    for (let i = this.emitters.length - 1; i >= 0; i--) {
+      const emitter = this.emitters[i];
+      if (emitter instanceof ServerDotEmitter && emitter.teamId === client.teamId) {
+        this.removeEmitter(emitter.emitterId);
+        if (!emitter.isRootEmitter) {
+          this.addNewDeadEmitter(emitter.x, emitter.y, emitter.power);
+        }
+      }
+    }
+    this.sendTeams();
   }
 
   clientJoin(connectionId: string) {
@@ -48,13 +83,13 @@ export class ServerGame {
 
     const {x: startingX, y: startingY} = this.getSafePosition();
 
-    this.clients.push({teamId, connectionId, color});
+    this.teams.push({teamId, connectionId, color});
     this.sendMessageToClient(connectionId, {type: 'joined', yourTeamId: teamId, startingX, startingY});
     this.sendMessageToClient(connectionId, {
       type: 'game-data',
       gameWidth: this.gameWidth,
       gameHeight: this.gameHeight,
-      teams: this.clients.map(c => ({
+      teams: this.teams.map(c => ({
         teamId: c.teamId,
         color: c.color,
       })),
@@ -85,18 +120,14 @@ export class ServerGame {
         y: a.y,
         swarmId: a.swarmId,
         dotCount: a.dotCount,
+        headingX: a.move?.headingX,
+        headingY: a.move?.headingY,
       })),
     });
 
-    const emitter = this.addNewEmitter(startingX, startingY, 2, teamId);
-    this.addNewSwarm(startingX, startingY, 500, emitter.emitterId, teamId);
-    this.sendMessageToClients({
-      type: 'set-team-data',
-      teams: this.clients.map(c => ({
-        teamId: c.teamId,
-        color: c.color,
-      })),
-    });
+    const emitter = this.addNewEmitter(startingX, startingY, 3, teamId, true);
+    this.addNewSwarm(startingX, startingY, 50, emitter.emitterId, teamId);
+    this.sendTeams();
   }
 
   isSafePosition(x: number, y: number, distance: number) {
@@ -111,13 +142,14 @@ export class ServerGame {
   }
 
   serverTick(tickIndex: number, duration: number) {
+    console.log('tick', tickIndex, this.teams.length, this.queuedMessages.length);
     for (const q of this.queuedMessages) {
       switch (q.message.type) {
         case 'join':
           this.clientJoin(q.connectionId);
           break;
         case 'move-dots':
-          const client = this.clients.find(a => a.connectionId === q.connectionId);
+          const client = this.teams.find(a => a.connectionId === q.connectionId);
           if (!client) {
             continue;
           }
@@ -161,24 +193,54 @@ export class ServerGame {
       }
     }
 
-    const messages: ServerToClientMessage[] = [];
-    for (const c of this.clients) {
+    const deadTeams = Utils.toDictionary(this.teams, a => a.teamId);
+
+    for (const swarm of this.swarms) {
+      delete deadTeams[swarm.teamId];
+    }
+    for (const emitter of this.emitters) {
+      if (emitter instanceof ServerDotEmitter) {
+        delete deadTeams[emitter.teamId];
+      }
+    }
+    for (const teamId of Object.keys(deadTeams)) {
+      console.log('died', teamId);
+      const team = this.teams.find(a => a.teamId === teamId);
+      this.sendMessageToClient(team.connectionId, {
+        type: 'dead',
+      });
+      this.teams.splice(this.teams.indexOf(team), 1);
+      const messages: ServerToClientMessage[] = [];
+      for (const q of this.queuedMessagesToSend) {
+        if (q.connectionId === null || q.connectionId === team.connectionId) {
+          messages.push(q.message);
+        }
+      }
+      if (messages.length > 0) {
+        this.serverSocket.sendMessage(team.connectionId, messages);
+      }
+    }
+    if (Object.keys(deadTeams).length > 0) {
+      this.sendTeams();
+    }
+
+    for (const c of this.teams) {
+      const messages: ServerToClientMessage[] = [];
       for (const q of this.queuedMessagesToSend) {
         if (q.connectionId === null || q.connectionId === c.connectionId) {
           messages.push(q.message);
         }
       }
       if (messages.length > 0) {
-        sendMessagesToClient(c.connectionId, messages);
+        this.serverSocket.sendMessage(c.connectionId, messages);
       }
-      messages.length = 0;
     }
     this.queuedMessagesToSend.length = 0;
   }
 
-  addNewEmitter(x: number, y: number, power: number, teamId: string) {
+  addNewEmitter(x: number, y: number, power: number, teamId: string, isRootEmitter: boolean) {
     const emitterId = uuid();
-    const dotEmitter = new ServerDotEmitter(this, x, y, power, emitterId, teamId);
+    const dotEmitter = new ServerDotEmitter(this, x, y, power, emitterId, teamId, isRootEmitter);
     this.emitters.push(dotEmitter);
     this.sendMessageToClients({type: 'new-emitter', x, y, power, emitterId, teamId});
     return dotEmitter;
@@ -318,5 +380,15 @@ export class ServerGame {
       return result.dead(emitter);
     }
     throw new Error('Emitter not found');
+  }
+
+  private sendTeams() {
+    this.sendMessageToClients({
+      type: 'set-team-data',
+      teams: this.teams.map(c => ({
+        teamId: c.teamId,
+        color: c.color,
+      })),
+    });
   }
 }

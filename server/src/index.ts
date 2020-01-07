@@ -1,4 +1,6 @@
 import {ServerGame} from './game/serverGame';
+import {ServerSocket} from './serverSocket';
 
-const serverGame = new ServerGame();
+const serverSocket = new ServerSocket();
+const serverGame = new ServerGame(serverSocket);
 serverGame.init();

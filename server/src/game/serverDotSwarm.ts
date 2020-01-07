@@ -65,22 +65,24 @@ export class ServerDotSwarm extends BaseDotSwarm {
       }
     }
 
-    for (let i = this.game.emitters.length - 1; i >= 0; i--) {
-      const emitter = this.game.emitters[i];
-      if (!(emitter instanceof ServerDeadEmitter)) {
-        continue;
-      }
+    if (!this.move) {
+      for (let i = this.game.emitters.length - 1; i >= 0; i--) {
+        const emitter = this.game.emitters[i];
+        if (!(emitter instanceof ServerDeadEmitter)) {
+          continue;
+        }
 
-      if (MathUtils.overlapCircles(this, emitter)) {
-        const power = Math.min(Math.max(Math.ceil(this.dotCount / 9)), this.dotCount, emitter.life);
-        this.augmentDotCount(-power);
-        const attackResult = emitter.attack(power);
+        if (MathUtils.overlapCircles(this, emitter)) {
+          const power = Math.min(Math.max(Math.ceil(this.dotCount / 9)), this.dotCount, emitter.life);
+          this.augmentDotCount(-power);
+          const attackResult = emitter.attack(power);
 
-        if (attackResult === 'dead') {
-          this.game.removeEmitter(emitter.emitterId);
-          const newEmitter = this.game.addNewEmitter(emitter.x, emitter.y, emitter.power, this.teamId);
-          this.game.addNewSwarm(newEmitter.x, newEmitter.y, this.dotCount, newEmitter.emitterId, this.teamId);
-          this.augmentDotCount(-this.dotCount);
+          if (attackResult === 'dead') {
+            this.game.removeEmitter(emitter.emitterId);
+            const newEmitter = this.game.addNewEmitter(emitter.x, emitter.y, emitter.power, this.teamId, false);
+            this.game.addNewSwarm(newEmitter.x, newEmitter.y, this.dotCount, newEmitter.emitterId, this.teamId);
+            this.augmentDotCount(-this.dotCount);
+          }
         }
       }
     }

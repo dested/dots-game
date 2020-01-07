@@ -3,5 +3,5 @@ const path = require("path");
 
 module.exports = override(
   removeModuleScopePlugin(),
-  babelInclude([path.resolve("src"), path.resolve("../common/src"), path.resolve("../server/src")])
+  babelInclude([path.resolve("src"), path.resolve("../common/src")])
 );

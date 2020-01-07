@@ -1,11 +1,11 @@
 import {Manager, Pan, Press, Swipe, Tap} from 'hammerjs';
 import {GameConfig} from '../../../common/src/models/gameConfig';
-import {ServerToClientMessage} from '../../../common/src/models/messages';
+import {ClientToServerMessage, ServerToClientMessage} from '../../../common/src/models/messages';
 import {MathUtils} from '../../../common/src/utils/mathUtils';
 import {unreachable} from '../../../common/src/utils/unreachable';
 import {uuid} from '../../../common/src/utils/uuid';
+import {ClientSocket} from '../clientSocket';
 import {CanvasUtils} from '../utils/canvasUtils';
-import {sendMessageToServer} from '../utils/fake-socket';
 import {ClientDeadEmitter} from './clientDeadEmitter';
 import {ClientDotEmitter} from './clientDotEmitter';
 import {ClientDotSwarm} from './clientDotSwarm';
@@ -24,11 +24,13 @@ export class ClientGame {
   private currentDragging: {x: number; y: number} | null = null;
   private view: GameView;
   connectionId: string;
+  private socket: ClientSocket;
+  private isDead: boolean = false;
 
-  constructor(gameId: string) {
+  constructor(private options: {onDied: () => void}) {
     this.connectionId = uuid();
 
-    this.canvas = document.getElementById('game' + gameId) as HTMLCanvasElement;
+    this.canvas = document.getElementById('game') as HTMLCanvasElement;
     this.context = this.canvas.getContext('2d')!;
 
     const manager = new Manager(this.canvas);
@@ -118,7 +120,7 @@ export class ClientGame {
         }
       }
       if (selected) {
-        sendMessageToServer(this.connectionId, {
+        this.sendMessageToServer({
           type: 'move-dots',
           x: this.view.x + e.center.x,
           y: this.view.y + e.center.y,
@@ -186,11 +188,26 @@ export class ClientGame {
     };
     requestNextFrame();
 
-    setTimeout(() => {
-      sendMessageToServer(this.connectionId, {
-        type: 'join',
-      });
-    }, 1000 + Math.random() * 500);
+    this.socket = new ClientSocket();
+    this.socket.connect(
+      () => {
+        this.sendMessageToServer({type: 'join'});
+      },
+      messages => {
+        this.processMessages(messages);
+      }
+    );
+  }
+
+  rejoin() {
+    this.isDead = false;
+    this.emitters.length = 0;
+    this.swarms.length = 0;
+    this.sendMessageToServer({type: 'join'});
+  }
+
+  sendMessageToServer(message: ClientToServerMessage) {
+    this.socket.sendMessage(message);
   }
 
   fillGameData(gameConfig: GameConfig) {
@@ -213,6 +230,9 @@ export class ClientGame {
     for (const swarm of gameConfig.swarms) {
       const s = this.addNewSwarm(swarm.swarmId, swarm.x, swarm.y, swarm.ownerEmitterId, swarm.teamId);
       s.augmentDotCount(swarm.dotCount);
+      if (swarm.headingX !== undefined && swarm.headingY !== undefined) {
+        s.setHeading(swarm.headingX, swarm.headingY);
+      }
     }
   }
 
@@ -273,6 +293,12 @@ export class ClientGame {
             this.teams = message.teams;
           }
           break;
+        case 'dead':
+          {
+            this.isDead = true;
+            this.options.onDied();
+          }
+          break;
         default:
           unreachable(message);
           break;
@@ -313,7 +339,7 @@ export class ClientGame {
       swarm.draw(context, dragEllipse);
     }
 
-    if (dragEllipse) {
+    if (!this.isDead && dragEllipse) {
       context.save();
       context.strokeStyle = 'white';
       context.lineWidth = 1;

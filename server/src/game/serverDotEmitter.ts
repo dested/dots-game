@@ -9,7 +9,8 @@ export class ServerDotEmitter implements ServerEmitter {
     public y: number,
     public power: number,
     public emitterId: string,
-    public teamId: string
+    public teamId: string,
+    public isRootEmitter: boolean
   ) {}
 
   get radius() {

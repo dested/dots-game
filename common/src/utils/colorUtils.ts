@@ -1,15 +1,15 @@
-export class ColorUtils{
-
-  static  shade  (col: string, amt: number) {
+export class ColorUtils {
+  static shade(col: string, amt: number) {
+    /*
     const n = +('0x' + col.replace('#', '')) + amt * 0x010101;
     const s = n.toString(16);
     const s1 = s.padStart(6, '0');
-    return '#' + s1;
-  };
-
+    return '#' + s1;*/
+    return col;
+  }
 
   static randomColor() {
-    return this.HSLToRGB(360 * Math.random(), 25 + 70 * Math.random(), 85 + 10 * Math.random());
+    return this.HSLToRGB(360 * Math.random(), 25 + 70 * Math.random(), 50 + 10 * Math.random());
   }
 
   static HSLToRGB(h: number, s: number, l: number) {
@@ -64,6 +64,4 @@ export class ColorUtils{
 
     return s1;
   }
-
-
 }

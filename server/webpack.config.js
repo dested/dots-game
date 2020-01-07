@@ -19,7 +19,7 @@ module.exports = env => {
     externals: {},
     mode: 'development',
     plugins: [
-      new webpack.IgnorePlugin(/uWebSockets/),
+      // new webpack.IgnorePlugin(/uWebSockets/),
       // env === 'deploy' && new UglifyJsPlugin(),
     ].filter(a => a),
     module: {
