@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "hammerjs": "^2.0.8",
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
@@ -16,7 +17,7 @@
     "typescript": "~3.7.2"
   },
   "devDependencies": {
-
+    "@types/hammerjs": "^2.0.36",
     "ts-loader": "^6.2.1",
     "prettier": "^1.19.1",
     "tslint": "^5.20.1",

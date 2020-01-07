@@ -1,62 +1,40 @@
+import {Manager, Pan, Press, Swipe, Tap} from 'hammerjs';
 import React, {useEffect} from 'react';
 import './App.css';
 
 const App: React.FC = () => {
   let game: Game;
   useEffect(() => {
-    game = new Game();
+    game = new Game({
+      gameWidth: 10000,
+      gameHeight: 10000,
+    });
   }, []);
 
-  let dragging = false;
-  function pointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
-    const {clientX, clientY} = e;
-    if (e.ctrlKey) {
-      game.addNewEmitter(clientX, clientY, 40, myTeamId);
-    } else {
-      game.dragDone();
-    }
-    dragging = false;
-  }
+  /*
+
+
 
   function pointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
-    const {clientX, clientY} = e;
-    if (e.ctrlKey) {
-      return;
-    }
     if (e.shiftKey) {
       game.moveDots(clientX, clientY);
       return;
-    }
-    game.startDragDown(clientX, clientY);
-    dragging = true;
   }
-
-  function pointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (!dragging) {
-      return;
-    }
-    const {clientX, clientY} = e;
-    if (e.ctrlKey) {
-      return;
-    }
-    game.dragMove(clientX, clientY);
-  }
+*/
 
   return (
     <div className="App">
-      <canvas
-        id={'game'}
-        width={window.innerWidth}
-        height={window.innerHeight}
-        onPointerUp={pointerUp}
-        onPointerMove={pointerMove}
-        onPointerDown={pointerDown}
-      />
+      <canvas id={'game'} width={window.innerWidth} height={window.innerHeight} />
     </div>
   );
 };
 
 export default App;
+
+interface GameConfig {
+  gameWidth: number;
+  gameHeight: number;
+}
 
 export class Game {
   emitters: Emitter[] = [];
@@ -65,17 +43,147 @@ export class Game {
   private context: CanvasRenderingContext2D;
   private startDragging: {x: number; y: number} | null = null;
   private currentDragging: {x: number; y: number} | null = null;
-  constructor() {
+  private view: GameView;
+
+  constructor(gameConfig: GameConfig) {
     this.canvas = document.getElementById('game') as HTMLCanvasElement;
     this.context = this.canvas.getContext('2d')!;
-    this.context.globalAlpha = 0.7;
+
+    const manager = new Manager(this.canvas);
+    manager.add(new Press({time: 0}));
+    manager.add(new Tap({event: 'doubletap', taps: 2})).recognizeWith(manager.get('press'));
+    manager
+      .add(new Tap({taps: 1}))
+      .requireFailure('doubletap')
+      .recognizeWith(manager.get('press'));
+    manager.add(new Pan({direction: Hammer.DIRECTION_ALL, threshold: 5}));
+    manager.add(new Swipe()).recognizeWith(manager.get('pan'));
+
+    // manager.add(swipe);
+    let startX = 0;
+    let startY = 0;
+    let startViewX = 0;
+    let startViewY = 0;
+    const swipeVelocity = {x: 0, y: 0};
+
+    this.view = new GameView(this.canvas, gameConfig.gameWidth, gameConfig.gameHeight);
+
+    window.addEventListener(
+      'resize',
+      () => {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.view.setBounds(window.innerWidth, window.innerHeight);
+        this.draw();
+      },
+      true
+    );
+
+    let lastPress: Date = new Date();
+    let doubleTap = false;
+    manager.on('press', e => {
+      doubleTap = +new Date() - +lastPress < 200;
+      lastPress = new Date();
+    });
+    manager.on('pressup', e => {
+      doubleTap = false;
+    });
+
+    manager.on('panmove', e => {
+      if (e.velocity === 0) {
+        return;
+      }
+      if (doubleTap) {
+        this.dragMove(this.view.x + e.center.x, this.view.y + e.center.y);
+      } else {
+        this.view.setPosition(startViewX + (startX - e.center.x), startViewY + (startY - e.center.y));
+      }
+    });
+
+    manager.on('panstart', e => {
+      if (doubleTap) {
+        this.startDragDown(this.view.x + e.center.x, this.view.y + e.center.y);
+      } else {
+        swipeVelocity.x = swipeVelocity.y = 0;
+        startX = e.center.x;
+        startY = e.center.y;
+        startViewX = this.view.x;
+        startViewY = this.view.y;
+      }
+    });
+
+    manager.on('panend', e => {
+      if (doubleTap) {
+        this.dragDone();
+      }
+    });
+
+    manager.on('swipe', (ev: {velocityX: number; velocityY: number}) => {
+      swipeVelocity.x = ev.velocityX * 10;
+      swipeVelocity.y = ev.velocityY * 10;
+    });
+
+    manager.on('tap', e => {
+      swipeVelocity.x = swipeVelocity.y = 0;
+
+      let selected = false;
+      for (const swarm of this.swarms) {
+        for (const dot of swarm.dots) {
+          if (dot.selected) {
+            selected = true;
+            break;
+          }
+        }
+      }
+      if (selected) {
+        this.moveDots(this.view.x + e.center.x, this.view.y + e.center.y);
+      }
+    });
+
+    manager.on('doubletap', e => {
+      swipeVelocity.x = swipeVelocity.y = 0;
+      for (const swarm of this.swarms) {
+        for (const dot of swarm.dots) {
+          dot.selected = false;
+        }
+      }
+    });
+
+    setInterval(() => {
+      if (Math.abs(swipeVelocity.x) > 0) {
+        const sign = MathUtils.mathSign(swipeVelocity.x);
+        swipeVelocity.x += 0.7 * -sign;
+        if (MathUtils.mathSign(swipeVelocity.x) !== sign) {
+          swipeVelocity.x = 0;
+        }
+      }
+
+      if (Math.abs(swipeVelocity.y) > 0) {
+        const sign = MathUtils.mathSign(swipeVelocity.y);
+        swipeVelocity.y += 0.7 * -sign;
+        if (MathUtils.mathSign(swipeVelocity.y) !== sign) {
+          swipeVelocity.y = 0;
+        }
+      }
+      if (Math.abs(swipeVelocity.x) > 0 || Math.abs(swipeVelocity.y) > 0) {
+        this.view.offsetPosition(-swipeVelocity.x, -swipeVelocity.y);
+      }
+    }, 1000 / 60);
+
+    /*
+    for (const emitter of gameConfig.emitters) {
+    }
+*/
+
+    // this.context.globalAlpha = 0.7;
     for (let i = 0; i < 10; i++) {
-      this.addNewEmitter(
+      const emitter = this.addNewEmitter(
         (Math.random() * window.innerWidth) | 0,
         (Math.random() * window.innerHeight) | 0,
         MathUtils.randomItem([1, 2]),
         MathUtils.randomItem(['a', 'b', 'c'])
       );
+      this.addNewSwarm(emitter.x, emitter.y, 5, emitter.emitterId, emitter.teamId);
     }
 
     let serverTick = 0;
@@ -94,9 +202,11 @@ export class Game {
   }
 
   serverTick(tickIndex: number) {
-    for (const emitter of this.emitters) {
+    for (let i = this.emitters.length - 1; i >= 0; i--) {
+      const emitter = this.emitters[i];
       emitter.serverTick();
     }
+
     for (const swarm of this.swarms) {
       if (tickIndex % 5 === 0) {
         if (!swarm.ownerEmitterId) {
@@ -107,31 +217,58 @@ export class Game {
       }
       swarm.battledThisTick.length = 0;
     }
+
     for (const swarm of this.swarms) {
       swarm.serverTick();
+    }
+
+    for (let i = this.swarms.length - 1; i >= 0; i--) {
+      const swarm = this.swarms[i];
+      if (swarm.dotCount <= 0) {
+        if (swarm.ownerEmitterId) {
+          this.removeSwarm(swarm.swarmId);
+          this.killEmitter(swarm.ownerEmitterId);
+        } else {
+          this.removeSwarm(swarm.swarmId);
+        }
+      }
     }
   }
 
   draw() {
-    this.context.fillStyle = 'rgba(0,0,0,.2)';
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    const context = this.context;
+
+    const vBox = this.view.viewBox;
+
+    context.save();
+    context.fillStyle = 'rgba(0,0,0,1)';
+    context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    context.translate(-this.view.x, -this.view.y);
+
     const dragEllipse = this.dragEllipse();
 
     for (const emitter of this.emitters) {
-      emitter.draw(this.context);
+      if (!MathUtils.overlapSquare(emitter, vBox)) {
+        continue;
+      }
+      emitter.draw(context);
     }
     for (const swarm of this.swarms) {
-      if (false && !swarm.ownerEmitterId) {
-        this.context.save();
-        this.context.fillStyle = 'rgba(160,109,175,0.7)';
-        CanvasUtils.circle(this.context, swarm.x, swarm.y, swarm.radius);
-        this.context.fill();
-        this.context.restore();
+      if (!MathUtils.overlapSquare(swarm, vBox)) {
+        continue;
       }
-      this.context.save();
-      this.context.translate(swarm.x, swarm.y);
+
+      if (false && !swarm.ownerEmitterId) {
+        context.save();
+        context.fillStyle = 'rgba(160,109,175,0.7)';
+        CanvasUtils.circle(context, swarm.x, swarm.y, swarm.radius);
+        context.fill();
+        context.restore();
+      }
+      context.save();
+      context.translate(swarm.x, swarm.y);
       for (const dot of swarm.dots) {
-        this.context.save();
+        context.save();
         if (
           dot.selected ||
           (dragEllipse &&
@@ -145,31 +282,35 @@ export class Game {
               swarm.y + dot.y
             ))
         ) {
-          this.context.fillStyle = 'white';
+          context.fillStyle = 'white';
         } else {
-          this.context.strokeStyle = 'white';
-          this.context.fillStyle = shade(colors[swarm.teamId], 10);
+          context.strokeStyle = 'white';
+          context.fillStyle = shade(colors[swarm.teamId], 10);
         }
-        this.context.lineWidth = 1;
-        CanvasUtils.circle(this.context, dot.x, dot.y, 1 + dot.value);
-        this.context.stroke();
-        this.context.fill();
-        this.context.restore();
+        context.lineWidth = 1;
+        CanvasUtils.circle(context, dot.x, dot.y, 1 + dot.value);
+        context.stroke();
+        context.fill();
+        context.restore();
       }
       // this.context.fillText(swarm.dotCount + ' ' + MathUtils.sum(swarm.dots.map(a => a.value)), 0, 0);
-      this.context.restore();
+      context.restore();
     }
 
     if (dragEllipse) {
-      this.context.save();
-      this.context.strokeStyle = 'white';
-      this.context.lineWidth = 1;
-      this.context.fillStyle = 'rgba(204,111,2,0.4)';
-      CanvasUtils.ellipse(this.context, dragEllipse.x, dragEllipse.y, dragEllipse.radiusX, dragEllipse.radiusY);
-      this.context.stroke();
-      this.context.fill();
-      this.context.restore();
+      context.save();
+      context.strokeStyle = 'white';
+      context.lineWidth = 1;
+      context.fillStyle = 'rgba(204,111,2,0.4)';
+      CanvasUtils.ellipse(context, dragEllipse.x, dragEllipse.y, dragEllipse.radiusX, dragEllipse.radiusY);
+      context.stroke();
+      context.fill();
+      context.restore();
     }
+    context.restore();
+
+    this.context.fillStyle = 'white';
+    this.context.fillText(this.view.x + ' ' + this.view.y, 100, 100);
   }
 
   dragEllipse() {
@@ -193,15 +334,20 @@ export class Game {
   }
 
   addNewEmitter(x: number, y: number, power: number, teamId: string) {
-    const swarmId = uuid();
     const emitterId = uuid();
 
-    this.emitters.push(new DotEmitter(this, x, y, power, emitterId, teamId));
+    const dotEmitter = new DotEmitter(this, x, y, power, emitterId, teamId);
+    this.emitters.push(dotEmitter);
 
+    return dotEmitter;
+  }
+
+  addNewSwarm(x: number, y: number, dotCount: number, emitterId: string | null, teamId: string) {
+    const swarmId = uuid();
     const dotSwarm = new DotSwarm(this, swarmId, x, y, emitterId, teamId);
-    dotSwarm.augmentDotCount(5);
-
+    dotSwarm.augmentDotCount(dotCount);
     this.swarms.push(dotSwarm);
+    return swarmId;
   }
 
   addNewDeadEmitter(x: number, y: number, power: number) {
@@ -327,6 +473,10 @@ export class Game {
 
   killEmitter(emitterId: string) {
     const emitter = this.emitters.find(a => a.emitterId === emitterId)!;
+    if (!emitter) {
+      // debugger;
+      throw new Error('Bunko');
+    }
     this.emitters.splice(this.emitters.indexOf(emitter), 1);
     this.addNewDeadEmitter(emitter.x, emitter.y, emitter.power);
   }
@@ -372,11 +522,7 @@ export class DotEmitter implements Emitter {
       // debugger;
       throw new Error('bnunko');
     }
-    if (find.dotCount + this.power < Constants.maxDotsPerSwarm) {
-      find.augmentDotCount(this.power);
-    } else {
-      find.augmentDotCount(Constants.maxDotsPerSwarm - find.dotCount);
-    }
+    find.augmentDotCount(Math.min(this.power, Constants.maxDotsPerSwarm - find.dotCount));
   }
 
   draw(context: CanvasRenderingContext2D): void {
@@ -386,7 +532,7 @@ export class DotEmitter implements Emitter {
     context.fillStyle = shade(colors[this.teamId], 50) + 'aa';
     const swarm = this.game.swarms.find(a => a.ownerEmitterId === this.emitterId);
     if (!swarm) {
-      // debugger;
+      debugger;
       throw new Error('bunkop');
     }
 
@@ -476,11 +622,7 @@ export class DotSwarm {
     this.dotCount = this.dotCount + dotCount;
 
     if (this.dotCount <= 0) {
-      if (this.ownerEmitterId) {
-        this.dots.length = 0;
-      } else {
-        this.game.removeSwarm(this.swarmId);
-      }
+      this.dots.length = 0;
       return;
     }
 
@@ -592,37 +734,24 @@ export class DotSwarm {
   }
 
   serverTick() {
-    for (let i = this.game.swarms.length - 1; i >= 0; i--) {
-      const swarm = this.game.swarms[i];
+    for (const swarm of this.game.swarms) {
+      if (this.dotCount <= 0 || swarm.dotCount <= 0) {
+        continue;
+      }
       if (swarm.teamId !== this.teamId) {
         if (swarm.battledThisTick.includes(this.swarmId)) {
           continue;
         }
         if (MathUtils.overlapCircles(this, swarm)) {
-          if (swarm.dotCount > 0) {
-            const power = Math.min(
-              Math.max(Math.ceil(this.dotCount / 9), Math.ceil(swarm.dotCount / 9)),
-              swarm.dotCount,
-              this.dotCount
-            );
-            this.augmentDotCount(-power);
-            swarm.augmentDotCount(-power);
-            swarm.battledThisTick.push(this.swarmId);
-            this.battledThisTick.push(swarm.swarmId);
-            if (swarm.dotCount <= 0 && swarm.ownerEmitterId) {
-              this.game.removeSwarm(swarm.swarmId);
-              this.game.killEmitter(swarm.ownerEmitterId);
-            }
-            if (this.dotCount <= 0 && this.ownerEmitterId) {
-              this.game.removeSwarm(this.swarmId);
-              this.game.killEmitter(this.ownerEmitterId);
-            }
-          } else {
-            if (swarm.ownerEmitterId) {
-              this.game.removeSwarm(swarm.swarmId);
-              this.game.killEmitter(swarm.ownerEmitterId);
-            }
-          }
+          const power = Math.min(
+            Math.max(Math.ceil(this.dotCount / 9), Math.ceil(swarm.dotCount / 9)),
+            swarm.dotCount,
+            this.dotCount
+          );
+          this.augmentDotCount(-power);
+          swarm.augmentDotCount(-power);
+          swarm.battledThisTick.push(this.swarmId);
+          this.battledThisTick.push(swarm.swarmId);
         }
       }
     }
@@ -640,10 +769,9 @@ export class DotSwarm {
 
         if (attackResult === 'dead') {
           this.game.removeEmitter(emitter.emitterId);
-          this.game.addNewEmitter(emitter.x, emitter.y, emitter.power, this.teamId);
-          if (this.game.tryMergeSwarm(this.swarmId) === 'removed') {
-            break;
-          }
+          const newEmitter = this.game.addNewEmitter(emitter.x, emitter.y, emitter.power, this.teamId);
+          this.game.addNewSwarm(newEmitter.x, newEmitter.y, this.dotCount, emitter.emitterId, this.teamId);
+          this.augmentDotCount(-this.dotCount);
         }
       }
     }
@@ -667,11 +795,11 @@ export class MathUtils {
   }
 
   static headingX(heading: Heading) {
-    const p = EasingFunctions.linear(heading.timing);
+    const p = AnimationUtils.easings.linear(heading.timing);
     return heading.startingX + (heading.headingX - heading.startingX) * p;
   }
   static headingY(heading: Heading) {
-    const p = EasingFunctions.linear(heading.timing);
+    const p = AnimationUtils.easings.linear(heading.timing);
     return heading.startingY + (heading.headingY - heading.startingY) * p;
   }
 
@@ -685,6 +813,9 @@ export class MathUtils {
       (left.radius + additionalRadius + (right.radius + additionalRadius)) *
       (left.radius + additionalRadius + (right.radius + additionalRadius));
     return distSq === radSumSq || distSq <= radSumSq;
+  }
+  static overlapSquare(point: {x: number; y: number}, box: {x: number; y: number; width: number; height: number}) {
+    return point.x > box.x && point.x < box.x + box.width && point.y > box.y && point.y < box.y + box.height;
   }
 
   static distance(x1: number, y1: number, x2: number, y2: number) {
@@ -700,6 +831,150 @@ export class MathUtils {
       sum += n;
     }
     return sum;
+  }
+
+  static mathSign(f: number) {
+    if (f < 0) {
+      return -1;
+    } else if (f > 0) {
+      return 1;
+    }
+    return 0;
+  }
+}
+
+export class GameView {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+
+  scale: number;
+
+  constructor(private canvas: HTMLCanvasElement, private gameWidth: number, private gameHeight: number) {
+    if (localStorage.getItem('view-x' + canvas.id)) {
+      this.x = parseInt(localStorage.getItem('view-x' + canvas.id)!);
+    } else {
+      this.x = 0;
+    }
+    if (localStorage.getItem('view-y' + canvas.id)) {
+      this.y = parseInt(localStorage.getItem('view-y' + canvas.id)!);
+    } else {
+      this.y = 0;
+    }
+
+    this.width = canvas.width;
+    this.height = canvas.height;
+    this.scale = 1;
+  }
+
+  get xSlop(): number {
+    return this.x - this.viewSlop;
+  }
+
+  get ySlop(): number {
+    return this.y - this.viewSlop;
+  }
+
+  get widthSlop(): number {
+    return this.width + this.viewSlop * 2;
+  }
+
+  get heightSlop(): number {
+    return this.height + this.viewSlop * 2;
+  }
+
+  get viewBox() {
+    const vx = Math.round(this.xSlop);
+    const vy = Math.round(this.ySlop);
+    const vwidth = Math.round(this.widthSlop);
+    const vheight = Math.round(this.heightSlop);
+    return {
+      x: vx,
+      y: vy,
+      width: vwidth,
+      height: vheight,
+    };
+  }
+
+  private viewSlop = 100;
+
+  setPosition(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+    this.clamp();
+
+    localStorage.setItem('view-x' + this.canvas.id, this.x.toString());
+    localStorage.setItem('view-y' + this.canvas.id, this.y.toString());
+  }
+
+  offsetPosition(x: number, y: number) {
+    this.setPosition(this.x + x, this.y + y);
+  }
+
+  private clamp() {
+    const gutter = 0.2;
+    const reverseGutter = 1 - gutter;
+
+    if (this.x < -this.width * gutter) {
+      this.x = -this.width * gutter;
+    }
+    if (this.y < -this.height * gutter) {
+      this.y = -this.height * gutter;
+    }
+
+    if (this.x > this.gameWidth - this.width * reverseGutter) {
+      this.x = this.gameWidth - this.width * reverseGutter;
+    }
+
+    if (this.y > this.gameHeight - this.height * reverseGutter) {
+      this.y = this.gameHeight - this.height * reverseGutter;
+    }
+  }
+
+  setBounds(w: number, h: number) {
+    this.width = w;
+    this.height = h;
+    this.clamp();
+  }
+
+  zoom(scale: number) {
+    AnimationUtils.start({
+      start: this.scale,
+      finish: scale,
+      duration: 250,
+      easing: AnimationUtils.easings.easeInCubic,
+      callback: c => {
+        this.scale = c;
+      },
+    });
+  }
+
+  moveToPoint(x: number, y: number) {
+    const startX = this.x;
+    const endX = this.x + (x - (this.x + this.width / 2));
+
+    const startY = this.y;
+    const endY = this.y + (y - (this.y + this.height / 2));
+
+    AnimationUtils.start({
+      start: 0,
+      finish: 1,
+      duration: 250,
+      easing: AnimationUtils.easings.easeInCubic,
+      callback: c => {
+        this.setPosition(AnimationUtils.lerp(startX, endX, c), AnimationUtils.lerp(startY, endY, c));
+      },
+    });
+    AnimationUtils.start({
+      start: this.scale,
+      finish: 2,
+      duration: 250,
+      easing: AnimationUtils.easings.easeInCubic,
+      callback: c => {
+        this.scale = c;
+      },
+    });
   }
 }
 
@@ -721,35 +996,6 @@ function uuid() {
     return v.toString(16);
   });
 }
-
-const EasingFunctions = {
-  // no easing, no acceleration
-  linear: (t: number) => t,
-  // accelerating from zero velocity
-  easeInQuad: (t: number) => t * t,
-  // decelerating to zero velocity
-  easeOutQuad: (t: number) => t * (2 - t),
-  // acceleration until halfway, then deceleration
-  easeInOutQuad: (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
-  // accelerating from zero velocity
-  easeInCubic: (t: number) => t * t * t,
-  // decelerating to zero velocity
-  easeOutCubic: (t: number) => --t * t * t + 1,
-  // acceleration until halfway, then deceleration
-  easeInOutCubic: (t: number) => (t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1),
-  // accelerating from zero velocity
-  easeInQuart: (t: number) => t * t * t * t,
-  // decelerating to zero velocity
-  easeOutQuart: (t: number) => 1 - --t * t * t * t,
-  // acceleration until halfway, then deceleration
-  easeInOutQuart: (t: number) => (t < 0.5 ? 8 * t * t * t * t : 1 - 8 * --t * t * t * t),
-  // accelerating from zero velocity
-  easeInQuint: (t: number) => t * t * t * t * t,
-  // decelerating to zero velocity
-  easeOutQuint: (t: number) => 1 + --t * t * t * t * t,
-  // acceleration until halfway, then deceleration
-  easeInOutQuint: (t: number) => (t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * --t * t * t * t * t),
-};
 
 interface Heading {
   startingX: number;
@@ -785,3 +1031,154 @@ const colors: {[key: string]: string} = {
 };
 
 const myTeamId = 'a';
+
+export class AnimationUtils {
+  static animations: AnimationInstance[] = [];
+
+  static stopAnimations() {
+    for (const animation of AnimationUtils.animations) {
+      animation.stop = true;
+    }
+    AnimationUtils.animations.length = 0;
+  }
+
+  static lerp(start: number, end: number, amt: number): number {
+    return start + (end - start) * amt;
+  }
+
+  static start(options: {
+    start: number;
+    finish: number;
+    callback: (current: number) => void;
+    duration: number;
+    easing: (percent: number) => number;
+    complete?: (finish: number) => void;
+  }): void {
+    if (options.start === options.finish) {
+      options.callback(options.finish);
+      options.complete && options.complete(options.finish);
+      return;
+    }
+
+    const startTime = +new Date();
+    const animationInstance = new AnimationInstance();
+    AnimationUtils.animations.push(animationInstance);
+
+    function next() {
+      if (animationInstance.stop) {
+        options.callback(options.finish);
+        options.complete && options.complete(options.finish);
+        return;
+      }
+      if (animationInstance.cancel) {
+        return;
+      }
+      const curTime = +new Date();
+      const percent = Math.max(Math.min((curTime - startTime) / options.duration, 1), 0);
+      const j = options.easing(percent);
+      options.callback(options.start + (options.finish - options.start) * j);
+      if (percent >= 1) {
+        AnimationUtils.animations.splice(AnimationUtils.animations.indexOf(animationInstance), 1);
+        options.complete && options.complete(options.finish);
+      } else {
+        requestAnimationFrame(next);
+      }
+    }
+
+    requestAnimationFrame(next);
+  }
+
+  static lightenDarkenColor(col: string, amount: number) {
+    let usePound = false;
+    if (col[0] === '#') {
+      col = col.slice(1);
+      usePound = true;
+    }
+    const num = (parseInt as any)(col, 16);
+    let r = (num >> 16) + amount;
+
+    if (r > 255) {
+      r = 255;
+    } else if (r < 0) {
+      r = 0;
+    }
+
+    let b = ((num >> 8) & 0x00ff) + amount;
+
+    if (b > 255) {
+      b = 255;
+    } else if (b < 0) {
+      b = 0;
+    }
+
+    let g = (num & 0x0000ff) + amount;
+
+    if (g > 255) {
+      g = 255;
+    } else if (g < 0) {
+      g = 0;
+    }
+
+    return (usePound ? '#' : '') + (g | (b << 8) | (r << 16)).toString(16);
+  }
+
+  static easings = {
+    // no easing, no acceleration
+    linear(t: number): number {
+      return t;
+    },
+    // accelerating from zero velocity
+    easeInQuad(t: number): number {
+      return t * t;
+    },
+    // decelerating to zero velocity
+    easeOutQuad(t: number): number {
+      return t * (2 - t);
+    },
+    // acceleration until halfway, then deceleration
+    easeInOutQuad(t: number): number {
+      return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    },
+    // accelerating from zero velocity
+    easeInCubic(t: number): number {
+      return t * t * t;
+    },
+    // decelerating to zero velocity
+    easeOutCubic(t: number): number {
+      return --t * t * t + 1;
+    },
+    // acceleration until halfway, then deceleration
+    easeInOutCubic(t: number): number {
+      return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+    },
+    // accelerating from zero velocity
+    easeInQuart(t: number): number {
+      return t * t * t * t;
+    },
+    // decelerating to zero velocity
+    easeOutQuart(t: number): number {
+      return 1 - --t * t * t * t;
+    },
+    // acceleration until halfway, then deceleration
+    easeInOutQuart(t: number): number {
+      return t < 0.5 ? 8 * t * t * t * t : 1 - 8 * --t * t * t * t;
+    },
+    // accelerating from zero velocity
+    easeInQuint(t: number): number {
+      return t * t * t * t * t;
+    },
+    // decelerating to zero velocity
+    easeOutQuint(t: number): number {
+      return 1 + --t * t * t * t * t;
+    },
+    // acceleration until halfway, then deceleration
+    easeInOutQuint(t: number): number {
+      return t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * --t * t * t * t * t;
+    },
+  };
+}
+
+export class AnimationInstance {
+  stop: boolean = false;
+  cancel: boolean = false;
+}
