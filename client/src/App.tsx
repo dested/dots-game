@@ -2,51 +2,350 @@ import {Manager, Pan, Press, Swipe, Tap} from 'hammerjs';
 import React, {useEffect} from 'react';
 import './App.css';
 
-const App: React.FC = () => {
-  let game: Game;
+const clientGames: ClientGame[] = [];
+
+const App: React.FC<{id: string; width: number; height: number}> = props => {
   useEffect(() => {
-    game = new Game({
-      gameWidth: 10000,
-      gameHeight: 10000,
-    });
+    clientGames.push(new ClientGame(props.id));
   }, []);
-
-  /*
-
-
-
-  function pointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (e.shiftKey) {
-      game.moveDots(clientX, clientY);
-      return;
-  }
-*/
-
   return (
     <div className="App">
-      <canvas id={'game'} width={window.innerWidth} height={window.innerHeight} />
+      <canvas id={'game' + props.id} width={props.width} height={props.height} />
     </div>
   );
 };
 
 export default App;
 
-interface GameConfig {
-  gameWidth: number;
-  gameHeight: number;
+export class ServerGame {
+  emitters: ServerEmitter[] = [];
+  swarms: ServerDotSwarm[] = [];
+  gameWidth: number = 0;
+  gameHeight: number = 0;
+
+  clients: {connectionId: string; teamId: string; color: string}[] = [];
+
+  constructor() {
+    let serverTick = 0;
+    setInterval(() => {
+      this.serverTick(++serverTick, 1000 / 5);
+    }, 1000 / 5);
+  }
+
+  init() {
+    this.gameHeight = this.gameWidth = 1000;
+    for (let i = 0; i < 10; i++) {
+      const {x, y} = this.getSafePosition();
+      this.addNewDeadEmitter(x, y, 2);
+    }
+  }
+
+  getSafePosition() {
+    while (true) {
+      const x = Math.round(MathUtils.randomPad(this.gameWidth, 0.05));
+      const y = Math.round(MathUtils.randomPad(this.gameHeight, 0.05));
+      if (this.isSafePosition(x, y, 200)) {
+        return {x, y};
+      }
+    }
+  }
+
+  clientJoin(connectionId: string) {
+    const teamId = uuid();
+    const color = randomColor();
+
+    const {x: startingX, y: startingY} = this.getSafePosition();
+
+    this.clients.push({teamId, connectionId, color});
+    this.sendMessageToClient(connectionId, {type: 'joined', yourTeamId: teamId, startingX, startingY});
+    this.sendMessageToClient(connectionId, {
+      type: 'game-data',
+      gameWidth: this.gameWidth,
+      gameHeight: this.gameHeight,
+      teams: this.clients.map(c => ({
+        teamId: c.teamId,
+        color: c.color,
+      })),
+      emitters: this.emitters.map(a =>
+        this.switchServerEmitter(a, {
+          dead: e => ({
+            type: 'dead',
+            life: e.life,
+            emitterId: e.emitterId,
+            x: e.x,
+            y: e.y,
+            power: e.power,
+          }),
+          dot: e => ({
+            type: 'dot',
+            teamId: e.teamId,
+            emitterId: e.emitterId,
+            x: e.x,
+            y: e.y,
+            power: e.power,
+          }),
+        })
+      ),
+      swarms: this.swarms.map(a => ({
+        teamId: a.teamId,
+        ownerEmitterId: a.ownerEmitterId,
+        x: a.x,
+        y: a.y,
+        swarmId: a.swarmId,
+        dotCount: a.dotCount,
+      })),
+    });
+
+    const emitter = this.addNewEmitter(startingX, startingY, 2, teamId);
+    this.addNewSwarm(startingX, startingY, 500, emitter.emitterId, teamId);
+    this.sendMessageToClients({
+      type: 'set-team-data',
+      teams: this.clients.map(c => ({
+        teamId: c.teamId,
+        color: c.color,
+      })),
+    });
+  }
+
+  isSafePosition(x: number, y: number, distance: number) {
+    const square = MathUtils.makeSquare(x - distance / 2, y - distance / 2, distance, distance);
+
+    for (const emitter of this.emitters) {
+      if (MathUtils.overlapSquare(emitter, square)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  serverTick(tickIndex: number, duration: number) {
+    for (const q of this.queuedMessages) {
+      switch (q.message.type) {
+        case 'join':
+          this.clientJoin(q.connectionId);
+          break;
+        case 'move-dots':
+          const client = this.clients.find(a => a.connectionId === q.connectionId);
+          if (!client) {
+            continue;
+          }
+          this.moveDots(q.message.x, q.message.y, client.teamId, q.message.swarms);
+          break;
+        default:
+          unreachable(q.message);
+      }
+    }
+    this.queuedMessages.length = 0;
+
+    for (let i = this.emitters.length - 1; i >= 0; i--) {
+      const emitter = this.emitters[i];
+      emitter.serverTick();
+    }
+
+    for (const swarm of this.swarms) {
+      if (tickIndex % 5 === 0) {
+        if (!swarm.ownerEmitterId) {
+          swarm.augmentDotCount(
+            -Math.max(swarm.depleter + Math.floor(swarm.dotCount / 300) + (swarm.move ? -1 : 1), 0)
+          );
+        }
+      }
+      swarm.battledThisTick.length = 0;
+    }
+
+    for (const swarm of this.swarms) {
+      swarm.serverTick(duration);
+    }
+
+    for (let i = this.swarms.length - 1; i >= 0; i--) {
+      const swarm = this.swarms[i];
+      if (swarm.dotCount <= 0) {
+        if (swarm.ownerEmitterId) {
+          this.removeSwarm(swarm.swarmId);
+          this.killEmitter(swarm.ownerEmitterId);
+        } else {
+          this.removeSwarm(swarm.swarmId);
+        }
+      }
+    }
+
+    const messages: ServerToClientMessage[] = [];
+    for (const c of this.clients) {
+      for (const q of this.queuedMessagesToSend) {
+        if (q.connectionId === null || q.connectionId === c.connectionId) {
+          messages.push(q.message);
+        }
+      }
+      if (messages.length > 0) {
+        sendMessagesToClient(c.connectionId, messages);
+      }
+      messages.length = 0;
+    }
+    this.queuedMessagesToSend.length = 0;
+  }
+
+  addNewEmitter(x: number, y: number, power: number, teamId: string) {
+    const emitterId = uuid();
+    const dotEmitter = new ServerDotEmitter(this, x, y, power, emitterId, teamId);
+    this.emitters.push(dotEmitter);
+    this.sendMessageToClients({type: 'new-emitter', x, y, power, emitterId, teamId});
+    return dotEmitter;
+  }
+
+  addNewSwarm(x: number, y: number, dotCount: number, ownerEmitterId: string | null, teamId: string) {
+    const swarmId = uuid();
+    const dotSwarm = new ServerDotSwarm(this, swarmId, x, y, ownerEmitterId, teamId);
+    this.sendMessageToClients({type: 'new-swarm', x, y, swarmId, ownerEmitterId, teamId});
+    dotSwarm.augmentDotCount(dotCount);
+    this.swarms.push(dotSwarm);
+    return dotSwarm;
+  }
+
+  addNewDeadEmitter(x: number, y: number, power: number) {
+    const emitterId = uuid();
+    this.emitters.push(new ServerDeadEmitter(this, x, y, power, emitterId));
+    this.sendMessageToClients({type: 'new-dead-emitter', x, y, power, emitterId});
+  }
+
+  moveDots(x: number, y: number, teamId: string, swarms: {swarmId: string; percent: number}[]) {
+    for (let i = this.swarms.length - 1; i >= 0; i--) {
+      const swarm = this.swarms[i];
+      const swarmMove = swarms.find(a => swarm.swarmId === a.swarmId);
+      if (teamId !== swarm.teamId || !swarmMove) {
+        continue;
+      }
+
+      const percent = swarmMove.percent;
+
+      if (percent === 1 && !swarm.ownerEmitterId) {
+        swarm.setHeading(x, y);
+      } else {
+        const dotCount = Math.round(swarm.dotCount * percent);
+
+        const newSwarm = this.addNewSwarm(swarm.x, swarm.y, dotCount, null, swarm.teamId);
+        newSwarm.setHeading(x, y);
+        swarm.augmentDotCount(-dotCount);
+      }
+    }
+  }
+
+  tryMergeSwarm(mergableSwarmId: string) {
+    let mergableSwarm = this.swarms.find(a => a.swarmId === mergableSwarmId)!;
+    while (true) {
+      let merged = false;
+      for (const swarm of this.swarms) {
+        if (swarm.teamId !== mergableSwarm.teamId) {
+          continue;
+        }
+        if (swarm === mergableSwarm || swarm.move) {
+          continue;
+        }
+        if (MathUtils.overlapCircles(swarm, mergableSwarm, 0)) {
+          if ((swarm.dotCount > mergableSwarm.dotCount || swarm.ownerEmitterId) && !mergableSwarm.ownerEmitterId) {
+            swarm.augmentDotCount(mergableSwarm.dotCount);
+            this.removeSwarm(mergableSwarm.swarmId);
+            mergableSwarm = swarm;
+          } else {
+            if (swarm.ownerEmitterId) {
+              continue;
+            }
+            mergableSwarm.augmentDotCount(swarm.dotCount);
+            this.removeSwarm(swarm.swarmId);
+          }
+          merged = true;
+          break;
+        }
+      }
+      if (!merged) {
+        break;
+      }
+    }
+  }
+
+  removeSwarm(swarmId: string) {
+    const index = this.swarms.findIndex(a => a.swarmId === swarmId);
+    if (index === -1) {
+      throw new Error('Bunko remove swarm');
+    }
+
+    this.swarms.splice(index, 1);
+    this.sendMessageToClients({
+      type: 'remove-swarm',
+      swarmId,
+    });
+  }
+
+  killEmitter(emitterId: string) {
+    const emitter = this.emitters.find(a => a.emitterId === emitterId)!;
+    if (!emitter) {
+      // debugger;
+      throw new Error('Bunko');
+    }
+    this.emitters.splice(this.emitters.indexOf(emitter), 1);
+    this.sendMessageToClients({
+      type: 'kill-emitter',
+      emitterId,
+    });
+    this.addNewDeadEmitter(emitter.x, emitter.y, emitter.power);
+  }
+
+  removeEmitter(emitterId: string) {
+    const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
+    if (emitterIndex === -1) {
+      throw new Error('Bunko remove emitter');
+    }
+    this.emitters.splice(emitterIndex, 1);
+    this.sendMessageToClients({
+      type: 'remove-emitter',
+      emitterId,
+    });
+  }
+
+  queuedMessages: {connectionId: string; message: ClientToServerMessage}[] = [];
+  queuedMessagesToSend: {connectionId: string | null; message: ServerToClientMessage}[] = [];
+
+  sendMessageToClient(connectionId: string, message: ServerToClientMessage) {
+    this.queuedMessagesToSend.push({connectionId, message});
+  }
+  sendMessageToClients(message: ServerToClientMessage) {
+    this.queuedMessagesToSend.push({connectionId: null, message});
+  }
+
+  processMessage(connectionId: string, message: ClientToServerMessage) {
+    this.queuedMessages.push({connectionId, message});
+  }
+
+  private switchServerEmitter<T1, T2>(
+    emitter: ServerEmitter,
+    result: {dot: (e: ServerDotEmitter) => T1; dead: (e: ServerDeadEmitter) => T2}
+  ): T1 | T2 {
+    if (emitter instanceof ServerDotEmitter) {
+      return result.dot(emitter);
+    }
+    if (emitter instanceof ServerDeadEmitter) {
+      return result.dead(emitter);
+    }
+    throw new Error('Emitter not found');
+  }
 }
 
-export class Game {
-  emitters: Emitter[] = [];
-  swarms: DotSwarm[] = [];
+export class ClientGame {
+  emitters: ClientEmitter[] = [];
+  swarms: ClientDotSwarm[] = [];
+  myTeamId?: string;
+  teams: {teamId: string; color: string}[] = [];
+
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private startDragging: {x: number; y: number} | null = null;
   private currentDragging: {x: number; y: number} | null = null;
   private view: GameView;
+  connectionId: string;
 
-  constructor(gameConfig: GameConfig) {
-    this.canvas = document.getElementById('game') as HTMLCanvasElement;
+  constructor(gameId: string) {
+    this.connectionId = uuid();
+
+    this.canvas = document.getElementById('game' + gameId) as HTMLCanvasElement;
     this.context = this.canvas.getContext('2d')!;
 
     const manager = new Manager(this.canvas);
@@ -66,7 +365,7 @@ export class Game {
     let startViewY = 0;
     const swipeVelocity = {x: 0, y: 0};
 
-    this.view = new GameView(this.canvas, gameConfig.gameWidth, gameConfig.gameHeight);
+    this.view = new GameView(this.canvas);
 
     window.addEventListener(
       'resize',
@@ -136,7 +435,27 @@ export class Game {
         }
       }
       if (selected) {
-        this.moveDots(this.view.x + e.center.x, this.view.y + e.center.y);
+        sendMessageToServer(this.connectionId, {
+          type: 'move-dots',
+          x: this.view.x + e.center.x,
+          y: this.view.y + e.center.y,
+          swarms: this.swarms
+            .filter(a => a.dots.some(d => d.selected))
+            .map(swarm => {
+              const selectedDots = MathUtils.sumC(swarm.dots, a => (a.selected ? 1 : 0));
+              const percent = selectedDots / swarm.dots.length;
+
+              return {
+                swarmId: swarm.swarmId,
+                percent,
+              };
+            }),
+        });
+      }
+      for (const swarm of this.swarms) {
+        for (const dot of swarm.dots) {
+          dot.selected = false;
+        }
       }
     });
 
@@ -170,67 +489,110 @@ export class Game {
       }
     }, 1000 / 60);
 
-    /*
-    for (const emitter of gameConfig.emitters) {
-    }
-*/
-
     // this.context.globalAlpha = 0.7;
-    for (let i = 0; i < 10; i++) {
-      const emitter = this.addNewEmitter(
-        (Math.random() * window.innerWidth) | 0,
-        (Math.random() * window.innerHeight) | 0,
-        MathUtils.randomItem([1, 2]),
-        MathUtils.randomItem(['a', 'b', 'c'])
-      );
-      this.addNewSwarm(emitter.x, emitter.y, 5, emitter.emitterId, emitter.teamId);
-    }
 
-    let serverTick = 0;
     setInterval(() => {
-      this.serverTick(++serverTick);
-    }, 200);
+      this.tick(1000 / 60);
+    }, 1000 / 60);
 
     const requestNextFrame = () => {
       requestAnimationFrame(() => {
-        this.tick();
         this.draw();
         requestNextFrame();
       });
     };
     requestNextFrame();
+
+    setTimeout(() => {
+      sendMessageToServer(this.connectionId, {
+        type: 'join',
+      });
+    }, 1000 + Math.random() * 500);
   }
 
-  serverTick(tickIndex: number) {
-    for (let i = this.emitters.length - 1; i >= 0; i--) {
-      const emitter = this.emitters[i];
-      emitter.serverTick();
-    }
-
-    for (const swarm of this.swarms) {
-      if (tickIndex % 5 === 0) {
-        if (!swarm.ownerEmitterId) {
-          swarm.augmentDotCount(
-            -Math.max(swarm.depleter + Math.floor(swarm.dotCount / 300) + (swarm.move ? -1 : 1), 0)
-          );
-        }
+  fillGameData(gameConfig: GameConfig) {
+    this.view.gameWidth = gameConfig.gameWidth;
+    this.view.gameHeight = gameConfig.gameHeight;
+    this.teams = gameConfig.teams;
+    for (const emitter of gameConfig.emitters) {
+      switch (emitter.type) {
+        case 'dot':
+          this.addNewEmitter(emitter.emitterId, emitter.x, emitter.y, emitter.power, emitter.teamId);
+          break;
+        case 'dead':
+          this.addNewDeadEmitter(emitter.emitterId, emitter.x, emitter.y, emitter.power);
+          break;
+        default:
+          unreachable(emitter);
+          break;
       }
-      swarm.battledThisTick.length = 0;
     }
-
-    for (const swarm of this.swarms) {
-      swarm.serverTick();
+    for (const swarm of gameConfig.swarms) {
+      const s = this.addNewSwarm(swarm.swarmId, swarm.x, swarm.y, swarm.ownerEmitterId, swarm.teamId);
+      s.augmentDotCount(swarm.dotCount);
     }
+  }
 
-    for (let i = this.swarms.length - 1; i >= 0; i--) {
-      const swarm = this.swarms[i];
-      if (swarm.dotCount <= 0) {
-        if (swarm.ownerEmitterId) {
-          this.removeSwarm(swarm.swarmId);
-          this.killEmitter(swarm.ownerEmitterId);
-        } else {
-          this.removeSwarm(swarm.swarmId);
-        }
+  processMessages(messages: ServerToClientMessage[]) {
+    for (const message of messages) {
+      switch (message.type) {
+        case 'joined':
+          this.myTeamId = message.yourTeamId;
+          this.view.moveToPoint(message.startingX, message.startingY);
+          break;
+        case 'game-data':
+          this.fillGameData(message);
+          break;
+        case 'new-emitter':
+          this.addNewEmitter(message.emitterId, message.x, message.y, message.power, message.teamId);
+          break;
+        case 'new-dead-emitter':
+          this.addNewDeadEmitter(message.emitterId, message.x, message.y, message.power);
+          break;
+        case 'set-dead-emitter-life':
+          {
+            const emitter = this.emitters.find(a => a.emitterId === message.emitterId);
+            if (emitter && emitter instanceof ClientDeadEmitter) {
+              emitter.setLife(message.life);
+            }
+          }
+          break;
+        case 'remove-swarm':
+          this.removeSwarm(message.swarmId);
+          break;
+        case 'kill-emitter':
+          this.killEmitter(message.emitterId);
+          break;
+        case 'remove-emitter':
+          this.removeEmitter(message.emitterId);
+          break;
+        case 'augment-dot-count':
+          {
+            const swarm = this.swarms.find(a => a.swarmId === message.swarmId);
+            if (swarm) {
+              swarm.augmentDotCount(message.dotCount);
+            }
+          }
+          break;
+        case 'new-swarm':
+          this.addNewSwarm(message.swarmId, message.x, message.y, message.ownerEmitterId, message.teamId);
+          break;
+        case 'set-swarm-heading':
+          {
+            const swarm = this.swarms.find(a => a.swarmId === message.swarmId);
+            if (swarm) {
+              swarm.setHeading(message.x, message.y);
+            }
+          }
+          break;
+        case 'set-team-data':
+          {
+            this.teams = message.teams;
+          }
+          break;
+        default:
+          unreachable(message);
+          break;
       }
     }
   }
@@ -238,11 +600,18 @@ export class Game {
   draw() {
     const context = this.context;
 
+    context.fillStyle = 'rgba(0,0,0,1)';
+    context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    if (!this.myTeamId) {
+      context.fillStyle = 'white';
+      context.fillText('Connecting...', 100, 100);
+      return;
+    }
+
     const vBox = this.view.viewBox;
 
     context.save();
-    context.fillStyle = 'rgba(0,0,0,1)';
-    context.fillRect(0, 0, this.canvas.width, this.canvas.height);
     context.translate(-this.view.x, -this.view.y);
 
     const dragEllipse = this.dragEllipse();
@@ -258,43 +627,7 @@ export class Game {
         continue;
       }
 
-      if (false && !swarm.ownerEmitterId) {
-        context.save();
-        context.fillStyle = 'rgba(160,109,175,0.7)';
-        CanvasUtils.circle(context, swarm.x, swarm.y, swarm.radius);
-        context.fill();
-        context.restore();
-      }
-      context.save();
-      context.translate(swarm.x, swarm.y);
-      for (const dot of swarm.dots) {
-        context.save();
-        if (
-          dot.selected ||
-          (dragEllipse &&
-            swarm.teamId === myTeamId &&
-            MathUtils.inEllipse(
-              dragEllipse.x,
-              dragEllipse.y,
-              dragEllipse.radiusX,
-              dragEllipse.radiusY,
-              swarm.x + dot.x,
-              swarm.y + dot.y
-            ))
-        ) {
-          context.fillStyle = 'white';
-        } else {
-          context.strokeStyle = 'white';
-          context.fillStyle = shade(colors[swarm.teamId], 10);
-        }
-        context.lineWidth = 1;
-        CanvasUtils.circle(context, dot.x, dot.y, 1 + dot.value);
-        context.stroke();
-        context.fill();
-        context.restore();
-      }
-      // this.context.fillText(swarm.dotCount + ' ' + MathUtils.sum(swarm.dots.map(a => a.value)), 0, 0);
-      context.restore();
+      swarm.draw(context, dragEllipse);
     }
 
     if (dragEllipse) {
@@ -308,9 +641,6 @@ export class Game {
       context.restore();
     }
     context.restore();
-
-    this.context.fillStyle = 'white';
-    this.context.fillText(this.view.x + ' ' + this.view.y, 100, 100);
   }
 
   dragEllipse() {
@@ -322,37 +652,35 @@ export class Game {
         radiusY: Math.abs((this.startDragging.y - this.currentDragging.y) / 2),
       };
     }
+    return undefined;
   }
 
-  tick() {
+  tick(duration: number) {
+    if (!this.myTeamId) {
+      return;
+    }
     for (const emitter of this.emitters) {
       emitter.tick();
     }
     for (const swarm of this.swarms) {
-      swarm.tick();
+      swarm.tick(duration);
     }
   }
 
-  addNewEmitter(x: number, y: number, power: number, teamId: string) {
-    const emitterId = uuid();
-
-    const dotEmitter = new DotEmitter(this, x, y, power, emitterId, teamId);
+  addNewEmitter(emitterId: string, x: number, y: number, power: number, teamId: string) {
+    const dotEmitter = new ClientDotEmitter(this, x, y, power, emitterId, teamId);
     this.emitters.push(dotEmitter);
-
     return dotEmitter;
   }
 
-  addNewSwarm(x: number, y: number, dotCount: number, emitterId: string | null, teamId: string) {
-    const swarmId = uuid();
-    const dotSwarm = new DotSwarm(this, swarmId, x, y, emitterId, teamId);
-    dotSwarm.augmentDotCount(dotCount);
+  addNewSwarm(swarmId: string, x: number, y: number, ownerEmitterId: string | null, teamId: string) {
+    const dotSwarm = new ClientDotSwarm(this, swarmId, x, y, ownerEmitterId, teamId);
     this.swarms.push(dotSwarm);
-    return swarmId;
+    return dotSwarm;
   }
 
-  addNewDeadEmitter(x: number, y: number, power: number) {
-    const emitterId = uuid();
-    this.emitters.push(new DeadEmitter(this, x, y, power, emitterId));
+  addNewDeadEmitter(emitterId: string, x: number, y: number, power: number) {
+    this.emitters.push(new ClientDeadEmitter(this, x, y, power, emitterId));
   }
 
   startDragDown(clientX: number, clientY: number) {
@@ -379,7 +707,7 @@ export class Game {
 
     const dragEllipse = this.dragEllipse()!;
     for (const swarm of this.swarms) {
-      if (swarm.teamId !== myTeamId) {
+      if (swarm.teamId !== this.myTeamId) {
         continue;
       }
       for (const dot of swarm.dots) {
@@ -402,107 +730,53 @@ export class Game {
     this.currentDragging = null;
   }
 
-  moveDots(x: number, y: number) {
-    for (let i = this.swarms.length - 1; i >= 0; i--) {
-      const swarm = this.swarms[i];
-      const selectedDots = swarm.dots.filter(a => a.selected);
-      if (selectedDots.length === 0) {
-        continue;
-      }
-      const percent = selectedDots.length / swarm.dots.length;
-
-      if (selectedDots.length === swarm.dots.length && !swarm.ownerEmitterId) {
-        swarm.setHeading(x, y);
-      } else {
-        const dotCount = MathUtils.sum(selectedDots.map(a => a.value));
-
-        const newSwarm = new DotSwarm(this, uuid(), swarm.x, swarm.y, null, swarm.teamId);
-        newSwarm.augmentDotCount(dotCount);
-        newSwarm.setHeading(x, y);
-        swarm.augmentDotCount(-dotCount);
-        this.swarms.push(newSwarm);
-      }
-      for (const selectedDot of selectedDots) {
-        selectedDot.selected = false;
-      }
-    }
-  }
-
-  tryMergeSwarm(mergableSwarmId: string): 'removed' | 'not-removed' {
-    let mergableSwarm = this.swarms.find(a => a.swarmId === mergableSwarmId)!;
-    let removed: 'removed' | 'not-removed' = 'not-removed';
-    while (true) {
-      let merged = false;
-      for (const swarm of this.swarms) {
-        if (swarm.teamId !== mergableSwarm.teamId) {
-          continue;
-        }
-        if (swarm === mergableSwarm || swarm.move) {
-          continue;
-        }
-        if (MathUtils.overlapCircles(swarm, mergableSwarm, 0)) {
-          if ((swarm.dotCount > mergableSwarm.dotCount || swarm.ownerEmitterId) && !mergableSwarm.ownerEmitterId) {
-            swarm.augmentDotCount(mergableSwarm.dotCount);
-            this.swarms.splice(this.swarms.indexOf(mergableSwarm), 1);
-            mergableSwarm = swarm;
-            removed = 'removed';
-          } else {
-            if (swarm.ownerEmitterId) {
-              continue;
-            }
-            mergableSwarm.augmentDotCount(swarm.dotCount);
-            this.swarms.splice(this.swarms.indexOf(swarm), 1);
-          }
-          merged = true;
-          break;
-        }
-      }
-      if (!merged) {
-        break;
-      }
-    }
-    return removed;
-  }
-
   removeSwarm(swarmId: string) {
-    this.swarms.splice(
-      this.swarms.findIndex(a => a.swarmId === swarmId),
-      1
-    );
+    const index = this.swarms.findIndex(a => a.swarmId === swarmId);
+    if (index === -1) {
+      throw new Error('Bunko remove swarm');
+    }
+    this.swarms.splice(index, 1);
   }
 
   killEmitter(emitterId: string) {
-    const emitter = this.emitters.find(a => a.emitterId === emitterId)!;
-    if (!emitter) {
+    const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
+    if (emitterIndex === -1) {
       // debugger;
-      throw new Error('Bunko');
+      throw new Error('Bunko kill emitter');
     }
-    this.emitters.splice(this.emitters.indexOf(emitter), 1);
-    this.addNewDeadEmitter(emitter.x, emitter.y, emitter.power);
+    this.emitters.splice(emitterIndex, 1);
   }
 
   removeEmitter(emitterId: string) {
-    const emitter = this.emitters.find(a => a.emitterId === emitterId)!;
-    this.emitters.splice(this.emitters.indexOf(emitter), 1);
+    const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
+    if (emitterIndex === -1) {
+      // debugger;
+      throw new Error('Bunko remove emitter');
+    }
+    this.emitters.splice(emitterIndex, 1);
   }
 }
 
 export interface Emitter {
-  game: Game;
   x: number;
   y: number;
   power: number;
   radius: number;
   emitterId: string;
-  tick(): void;
-  serverTick(): void;
+}
 
+export interface ClientEmitter extends Emitter {
+  tick(): void;
   draw(context: CanvasRenderingContext2D): void;
 }
 
-export class DotEmitter implements Emitter {
+export interface ServerEmitter extends Emitter {
+  serverTick(): void;
+}
+
+export class ClientDotEmitter implements ClientEmitter {
   constructor(
-    public game: Game,
+    public game: ClientGame,
     public x: number,
     public y: number,
     public power: number,
@@ -516,23 +790,19 @@ export class DotEmitter implements Emitter {
     return this.game.swarms.find(a => a.ownerEmitterId === this.emitterId)!.radius;
   }
 
-  serverTick() {
-    const find = this.game.swarms.find(a => a.ownerEmitterId === this.emitterId);
-    if (!find) {
-      // debugger;
-      throw new Error('bnunko');
-    }
-    find.augmentDotCount(Math.min(this.power, Constants.maxDotsPerSwarm - find.dotCount));
-  }
-
   draw(context: CanvasRenderingContext2D): void {
     context.save();
     context.strokeStyle = 'white';
     context.lineWidth = 3;
-    context.fillStyle = shade(colors[this.teamId], 50) + 'aa';
+    const team = this.game.teams.find(t => t.teamId === this.teamId);
+    if (!team) {
+      // debugger;
+      throw new Error('bunkop team' + this.teamId);
+    }
+    context.fillStyle = shade(team.color, 20) + 'aa';
     const swarm = this.game.swarms.find(a => a.ownerEmitterId === this.emitterId);
     if (!swarm) {
-      debugger;
+      // debugger;
       throw new Error('bunkop');
     }
 
@@ -543,42 +813,93 @@ export class DotEmitter implements Emitter {
   }
 }
 
-export class DeadEmitter implements Emitter {
-  duration = Constants.deadEmitterStartingDuration;
-  life = Constants.deadEmitterStartingLife;
-
-  constructor(public game: Game, public x: number, public y: number, public power: number, public emitterId: string) {}
-
-  tick() {}
+export class ServerDotEmitter implements ServerEmitter {
+  constructor(
+    public game: ServerGame,
+    public x: number,
+    public y: number,
+    public power: number,
+    public emitterId: string,
+    public teamId: string
+  ) {}
 
   get radius() {
+    return this.game.swarms.find(a => a.ownerEmitterId === this.emitterId)!.radius;
+  }
+
+  serverTick() {
+    const find = this.game.swarms.find(a => a.ownerEmitterId === this.emitterId);
+    if (!find) {
+      // debugger;
+      throw new Error('bnunko');
+    }
+    find.augmentDotCount(Math.min(this.power, Constants.maxDotsPerSwarm - find.dotCount));
+  }
+}
+
+export class BaseDeadEmitter implements Emitter {
+  constructor(public x: number, public y: number, public power: number, public emitterId: string) {}
+  get radius() {
     return Constants.emitterRadius;
+  }
+}
+
+export class ServerDeadEmitter extends BaseDeadEmitter implements ServerEmitter {
+  duration = Math.round(Math.random() * Constants.deadEmitterStartingDuration);
+  life = Constants.deadEmitterStartingLife;
+
+  constructor(public game: ServerGame, x: number, y: number, power: number, emitterId: string) {
+    super(x, y, power, emitterId);
   }
 
   serverTick() {
     if (this.life < Constants.deadEmitterStartingLife) {
-      this.life++;
+      this.setLife(this.life + 1);
     }
+    this.setDuration(this.duration - 1);
     this.duration--;
     if (this.duration <= 0) {
       this.game.removeEmitter(this.emitterId);
+      const {x, y} = this.game.getSafePosition();
+      this.game.addNewDeadEmitter(x, y, this.power);
     }
   }
 
   attack(amount: number) {
-    this.life -= amount;
-    this.duration = Constants.deadEmitterStartingDuration;
+    this.setLife(this.life - amount);
+    this.setDuration(Constants.deadEmitterStartingDuration - amount);
     if (this.life <= 0) {
       return 'dead';
     }
     return 'alive';
   }
 
+  setLife(life: number) {
+    this.life = life;
+    this.game.sendMessageToClients({
+      type: 'set-dead-emitter-life',
+      emitterId: this.emitterId,
+      life,
+    });
+  }
+  setDuration(duration: number) {
+    this.duration = duration;
+  }
+}
+
+export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter {
+  life: number = Constants.deadEmitterStartingLife;
+  constructor(public game: ClientGame, x: number, y: number, power: number, emitterId: string) {
+    super(x, y, power, emitterId);
+  }
+
+  tick() {}
+
   draw(context: CanvasRenderingContext2D): void {
     context.save();
     context.strokeStyle = 'white';
     context.lineWidth = 3;
-    context.fillStyle = shade(colors.NONE, 50) + 'aa';
+    context.fillStyle = shade('#d4d4d4', 50) + 'aa';
 
     CanvasUtils.circle(
       context,
@@ -590,10 +911,56 @@ export class DeadEmitter implements Emitter {
     context.fill();
     context.restore();
   }
+
+  setLife(life: number) {
+    this.life = life;
+  }
 }
 
-export class DotSwarm {
+export class BaseDotSwarm {
   dotCount: number = 0;
+  move?: MoveDirection;
+
+  constructor(
+    public swarmId: string,
+    public x: number,
+    public y: number,
+    public ownerEmitterId: string | null,
+    public teamId: string
+  ) {}
+
+  get radius(): number {
+    return Math.min((this.ownerEmitterId ? Constants.emitterRadius : 20) + this.dotCount / 5, 80);
+  }
+
+  randomPosition() {
+    const a = Math.random() * 2 * Math.PI;
+    const r = this.radius * Math.sqrt(Math.random());
+
+    const x = r * Math.cos(a);
+    const y = r * Math.sin(a);
+
+    return {x, y};
+  }
+
+  setHeading(x: number, y: number) {
+    const distance = MathUtils.distance(x, y, this.x, this.y);
+    const directionX = (x - this.x) / distance;
+    const directionY = (y - this.y) / distance;
+    this.move = {
+      startingX: this.x,
+      startingY: this.y,
+      headingX: x,
+      headingY: y,
+      distance,
+      directionX,
+      directionY,
+      speed: 50,
+    };
+  }
+}
+
+export class ClientDotSwarm extends BaseDotSwarm {
   dots: {
     selected: boolean;
     x: number;
@@ -601,19 +968,17 @@ export class DotSwarm {
     heading: Heading;
     value: number;
   }[] = [];
-  move?: MoveDirection;
-
-  depleter: number = 1;
-  battledThisTick: string[] = [];
 
   constructor(
-    public game: Game,
-    public swarmId: string,
-    public x: number,
-    public y: number,
-    public ownerEmitterId: string | null,
-    public teamId: string
-  ) {}
+    public game: ClientGame,
+    swarmId: string,
+    x: number,
+    y: number,
+    ownerEmitterId: string | null,
+    teamId: string
+  ) {
+    super(swarmId, x, y, ownerEmitterId, teamId);
+  }
 
   augmentDotCount(dotCount: number) {
     if (dotCount === 0) {
@@ -669,29 +1034,14 @@ export class DotSwarm {
     }
   }
 
-  get radius(): number {
-    return Math.min((this.ownerEmitterId ? Constants.emitterRadius : 20) + this.dotCount / 5, 80);
-  }
-
-  randomPosition() {
-    const a = Math.random() * 2 * Math.PI;
-    const r = this.radius * Math.sqrt(Math.random());
-
-    const x = r * Math.cos(a);
-    const y = r * Math.sin(a);
-
-    return {x, y};
-  }
-
-  tick() {
+  tick(duration: number) {
     if (this.move) {
-      this.x += this.move.directionX * this.move.speed * 0.016;
-      this.y += this.move.directionY * this.move.speed * 0.016;
+      this.x = this.x + this.move.directionX * (this.move.speed * (duration / 1000));
+      this.y = this.y + this.move.directionY * (this.move.speed * (duration / 1000));
       if (MathUtils.distance(this.x, this.y, this.move.startingX, this.move.startingY) > this.move.distance) {
         this.x = this.move.headingX;
         this.y = this.move.headingY;
         this.move = undefined;
-        this.game.tryMergeSwarm(this.swarmId); // todo this needs to be inservertick
       }
     }
 
@@ -717,23 +1067,87 @@ export class DotSwarm {
     }
   }
 
-  setHeading(x: number, y: number) {
-    const distance = MathUtils.distance(x, y, this.x, this.y);
-    const directionX = (x - this.x) / distance;
-    const directionY = (y - this.y) / distance;
-    this.move = {
-      startingX: this.x,
-      startingY: this.y,
-      headingX: x,
-      headingY: y,
-      distance,
-      directionX,
-      directionY,
-      speed: 100,
-    };
+  draw(context: CanvasRenderingContext2D, dragEllipse?: {x: number; y: number; radiusX: number; radiusY: number}) {
+    if (false && !this.ownerEmitterId) {
+      context.save();
+      context.fillStyle = 'rgba(160,109,175,0.7)';
+      CanvasUtils.circle(context, this.x, this.y, this.radius);
+      context.fill();
+      context.restore();
+    }
+    context.save();
+    context.translate(this.x, this.y);
+    for (const dot of this.dots) {
+      context.save();
+      if (
+        dot.selected ||
+        (dragEllipse &&
+          this.teamId === this.game.myTeamId &&
+          MathUtils.inEllipse(
+            dragEllipse.x,
+            dragEllipse.y,
+            dragEllipse.radiusX,
+            dragEllipse.radiusY,
+            this.x + dot.x,
+            this.y + dot.y
+          ))
+      ) {
+        context.fillStyle = 'white';
+      } else {
+        context.strokeStyle = 'white';
+        context.fillStyle = shade(this.game.teams.find(t => t.teamId === this.teamId)!.color, 10);
+      }
+      context.lineWidth = 1;
+      CanvasUtils.circle(context, dot.x, dot.y, 1 + dot.value);
+      context.stroke();
+      context.fill();
+      context.restore();
+    }
+    // this.context.fillText(this.dotCount + ' ' + MathUtils.sum(this.dots.map(a => a.value)), 0, 0);
+    context.restore();
+  }
+}
+
+export class ServerDotSwarm extends BaseDotSwarm {
+  constructor(
+    public game: ServerGame,
+    swarmId: string,
+    x: number,
+    y: number,
+    ownerEmitterId: string | null,
+    teamId: string
+  ) {
+    super(swarmId, x, y, ownerEmitterId, teamId);
   }
 
-  serverTick() {
+  depleter: number = 1;
+  battledThisTick: string[] = [];
+
+  augmentDotCount(dotCount: number) {
+    if (dotCount === 0) {
+      return;
+    }
+    this.dotCount = this.dotCount + dotCount;
+    this.game.sendMessageToClients({
+      type: 'augment-dot-count',
+      swarmId: this.swarmId,
+      dotCount,
+    });
+  }
+
+  serverTick(duration: number) {
+    if (this.move) {
+      this.x = this.x + this.move.directionX * (this.move.speed * (duration / 1000));
+      this.y = this.y + this.move.directionY * (this.move.speed * (duration / 1000));
+
+      if (MathUtils.distance(this.x, this.y, this.move.startingX, this.move.startingY) > this.move.distance) {
+        this.x = this.move.headingX;
+        this.y = this.move.headingY;
+        this.move = undefined;
+        this.game.tryMergeSwarm(this.swarmId);
+      }
+    }
+
     for (const swarm of this.game.swarms) {
       if (this.dotCount <= 0 || swarm.dotCount <= 0) {
         continue;
@@ -758,7 +1172,7 @@ export class DotSwarm {
 
     for (let i = this.game.emitters.length - 1; i >= 0; i--) {
       const emitter = this.game.emitters[i];
-      if (!(emitter instanceof DeadEmitter)) {
+      if (!(emitter instanceof ServerDeadEmitter)) {
         continue;
       }
 
@@ -770,11 +1184,21 @@ export class DotSwarm {
         if (attackResult === 'dead') {
           this.game.removeEmitter(emitter.emitterId);
           const newEmitter = this.game.addNewEmitter(emitter.x, emitter.y, emitter.power, this.teamId);
-          this.game.addNewSwarm(newEmitter.x, newEmitter.y, this.dotCount, emitter.emitterId, this.teamId);
+          this.game.addNewSwarm(newEmitter.x, newEmitter.y, this.dotCount, newEmitter.emitterId, this.teamId);
           this.augmentDotCount(-this.dotCount);
         }
       }
     }
+  }
+
+  setHeading(x: number, y: number) {
+    super.setHeading(x, y);
+    this.game.sendMessageToClients({
+      type: 'set-swarm-heading',
+      swarmId: this.swarmId,
+      x,
+      y,
+    });
   }
 }
 
@@ -782,7 +1206,7 @@ export class Constants {
   static emitterRadius = 30;
   static maxRenderedDotsPerSwarm = 50;
   static maxDotsPerSwarm = 500;
-  static deadEmitterStartingDuration = 100;
+  static deadEmitterStartingDuration = 1000;
   static deadEmitterStartingLife = 100;
 }
 
@@ -801,6 +1225,11 @@ export class MathUtils {
   static headingY(heading: Heading) {
     const p = AnimationUtils.easings.linear(heading.timing);
     return heading.startingY + (heading.headingY - heading.startingY) * p;
+  }
+
+  static randomPad(len: number, paddingPercent: number) {
+    const padding = len * paddingPercent;
+    return Math.random() * (len - padding * 2) + padding;
   }
 
   static overlapCircles(
@@ -832,6 +1261,13 @@ export class MathUtils {
     }
     return sum;
   }
+  static sumC<T>(numbers: T[], callback: (t: T) => number) {
+    let sum = 0;
+    for (const n of numbers) {
+      sum += callback(n);
+    }
+    return sum;
+  }
 
   static mathSign(f: number) {
     if (f < 0) {
@@ -840,6 +1276,10 @@ export class MathUtils {
       return 1;
     }
     return 0;
+  }
+
+  static makeSquare(x: number, y: number, width: number, height: number) {
+    return {x, y, width, height};
   }
 }
 
@@ -851,7 +1291,10 @@ export class GameView {
 
   scale: number;
 
-  constructor(private canvas: HTMLCanvasElement, private gameWidth: number, private gameHeight: number) {
+  gameWidth: number = 0;
+  gameHeight: number = 0;
+
+  constructor(private canvas: HTMLCanvasElement) {
     if (localStorage.getItem('view-x' + canvas.id)) {
       this.x = parseInt(localStorage.getItem('view-x' + canvas.id)!);
     } else {
@@ -996,6 +1439,61 @@ function uuid() {
     return v.toString(16);
   });
 }
+function randomColor() {
+  return HSLToRGB(360 * Math.random(), 25 + 70 * Math.random(), 85 + 10 * Math.random());
+}
+function HSLToRGB(h: number, s: number, l: number) {
+  // Must be fractions of 1
+  s /= 100;
+  l /= 100;
+
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (0 <= h && h < 60) {
+    r = c;
+    g = x;
+    b = 0;
+  } else if (60 <= h && h < 120) {
+    r = x;
+    g = c;
+    b = 0;
+  } else if (120 <= h && h < 180) {
+    r = 0;
+    g = c;
+    b = x;
+  } else if (180 <= h && h < 240) {
+    r = 0;
+    g = x;
+    b = c;
+  } else if (240 <= h && h < 300) {
+    r = x;
+    g = 0;
+    b = c;
+  } else if (300 <= h && h < 360) {
+    r = c;
+    g = 0;
+    b = x;
+  }
+
+  function rgbToHex(rgb: number) {
+    let hex = Number(rgb).toString(16);
+    if (hex.length < 2) {
+      hex = '0' + hex;
+    }
+    return hex;
+  }
+  r = Math.round((r + m) * 255);
+  g = Math.round((g + m) * 255);
+  b = Math.round((b + m) * 255);
+
+  const s1 = `#${rgbToHex(r)}${rgbToHex(g)}${rgbToHex(b)}`;
+
+  return s1;
+}
 
 interface Heading {
   startingX: number;
@@ -1022,15 +1520,6 @@ const shade = (col: string, amt: number) => {
   const s1 = s.padStart(6, '0');
   return '#' + s1;
 };
-
-const colors: {[key: string]: string} = {
-  a: '#ba0506',
-  b: '#18ba00',
-  c: '#0016ba',
-  NONE: '#d4d4d4',
-};
-
-const myTeamId = 'a';
 
 export class AnimationUtils {
   static animations: AnimationInstance[] = [];
@@ -1181,4 +1670,87 @@ export class AnimationUtils {
 export class AnimationInstance {
   stop: boolean = false;
   cancel: boolean = false;
+}
+
+const serverGame = new ServerGame();
+serverGame.init();
+
+function sendMessageToServer(connectionId: string, message: ClientToServerMessage) {
+  serverGame.processMessage(connectionId, message);
+  // console.log('to server', JSON.stringify(message));
+}
+function sendMessagesToClient(connectionId: string, messages: ServerToClientMessage[]) {
+  clientGames.find(a => a.connectionId === connectionId)!.processMessages(messages);
+  // console.log('to client', JSON.stringify(messages));
+}
+
+type ClientToServerMessage =
+  | {
+      type: 'join';
+    }
+  | {
+      type: 'move-dots';
+      x: number;
+      y: number;
+      swarms: {swarmId: string; percent: number}[];
+    };
+
+type ServerToClientMessage =
+  | {
+      type: 'joined';
+      yourTeamId: string;
+      startingX: number;
+      startingY: number;
+    }
+  | ({
+      type: 'game-data';
+    } & GameConfig)
+  | {type: 'new-emitter'; x: number; y: number; power: number; emitterId: string; teamId: string}
+  | {type: 'new-dead-emitter'; x: number; y: number; power: number; emitterId: string}
+  | {type: 'set-dead-emitter-life'; life: number; emitterId: string}
+  | {type: 'remove-swarm'; swarmId: string}
+  | {type: 'kill-emitter'; emitterId: string}
+  | {type: 'remove-emitter'; emitterId: string}
+  | {type: 'augment-dot-count'; swarmId: string; dotCount: number}
+  | {type: 'set-team-data'; teams: {teamId: string; color: string}[]}
+  | {
+      type: 'new-swarm';
+      x: number;
+      y: number;
+      swarmId: string;
+      ownerEmitterId: string | null;
+      teamId: string;
+    }
+  | {
+      type: 'set-swarm-heading';
+      swarmId: string;
+      x: number;
+      y: number;
+    };
+
+function unreachable(t: never) {}
+
+interface GameConfig {
+  emitters: (
+    | {
+        type: 'dot';
+        teamId: string;
+        x: number;
+        y: number;
+        emitterId: string;
+        power: number;
+      }
+    | {
+        type: 'dead';
+        x: number;
+        y: number;
+        emitterId: string;
+        life: number;
+        power: number;
+      }
+  )[];
+  swarms: {teamId: string; x: number; y: number; ownerEmitterId: string | null; swarmId: string; dotCount: number}[];
+  teams: {teamId: string; color: string}[];
+  gameWidth: number;
+  gameHeight: number;
 }
