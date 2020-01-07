@@ -1,0 +1,32 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "rimraf dist && webpack --mode development",
+    "watch": "rimraf dist && webpack --mode development --watch",
+    "nodemon": "nodemon",
+    "start": "node ./dist/index.js",
+    "debug": "node --inspect-brk ./dist/index.js",
+    "deploy": "rimraf dist && webpack --mode production webpack --progress --hide-modules"
+  },
+  "dependencies": {
+    "uWebSockets.js": "uNetworking/uWebSockets.js#v16.5.0"
+  },
+  "devDependencies": {
+    "@types/node-fetch": "^2.1.1",
+    "@types/node": "^8.0.28",
+    "nodemon": "^1.12.1",
+    "ts-node": "^3.3.0",
+    "uglifyjs-webpack-plugin": "^1.2.5",
+    "webpack-cli": "^3.3.10",
+    "zip-webpack-plugin": "2.1.0",
+    "ts-loader": "^6.2.1",
+    "prettier": "^1.19.1",
+    "typescript": "^3.7.4",
+    "tslint": "^5.20.1",
+    "tslint-config-prettier": "^1.18.0",
+    "tslint-plugin-prettier": "^2.1.0",
+    "tslint-eslint-rules": "^5.4.0",
+    "webpack": "^4.41.5"
+  }
+}
