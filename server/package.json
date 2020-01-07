@@ -1,5 +1,5 @@
 {
-  "name": "server",
+  "name": "dots-game-server",
   "version": "1.0.0",
   "scripts": {
     "build": "rimraf dist && webpack --mode development",
