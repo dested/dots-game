@@ -40,7 +40,7 @@ export class BaseDotSwarm {
       distance,
       directionX,
       directionY,
-      speed: 50,
+      speed: 200,
     };
   }
 }

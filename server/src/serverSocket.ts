@@ -11,18 +11,11 @@ export class ServerSocket {
     onLeave: (connectionId: string) => void,
     onMessage: (connectionId: string, message: ClientToServerMessage) => void
   ) {
-    const port = parseInt(process.env.PORT || '3120');
+    const port = parseInt(process.env.PORT || '8081');
     console.log(port, 'port');
     this.wss = new WebServer.Server({port});
     this.wss.on('error', (a: any, b: any) => {
       console.error('error', a, b);
-    });
-    this.wss.on('listening', (a: any, b: any) => {
-      console.error('listen', a, b);
-    });
-
-    this.wss.on('headers', (a: any, b: any) => {
-      console.error('headers', a, b);
     });
 
     this.wss.on('connection', ws => {

@@ -1,3 +1,4 @@
+import {GameConstants} from '../../../common/src/game/gameConstants';
 import {ClientToServerMessage, ServerToClientMessage} from '../../../common/src/models/messages';
 import {ColorUtils} from '../../../common/src/utils/colorUtils';
 import {MathUtils} from '../../../common/src/utils/mathUtils';
@@ -39,7 +40,11 @@ export class ServerGame {
 
     let serverTick = 0;
     setInterval(() => {
-      this.serverTick(++serverTick, 1000 / 5);
+      try {
+        this.serverTick(++serverTick, 1000 / 5);
+      } catch (ex) {
+        console.error(ex);
+      }
     }, 1000 / 5);
   }
 
@@ -239,6 +244,7 @@ export class ServerGame {
   }
 
   addNewEmitter(x: number, y: number, power: number, teamId: string, isRootEmitter: boolean) {
+    power *= 10;
     const emitterId = uuid();
     const dotEmitter = new ServerDotEmitter(this, x, y, power, emitterId, teamId, isRootEmitter);
     this.emitters.push(dotEmitter);
@@ -295,18 +301,28 @@ export class ServerGame {
           continue;
         }
         if (MathUtils.overlapCircles(swarm, mergableSwarm, 0)) {
+          debugger;
           if ((swarm.dotCount > mergableSwarm.dotCount || swarm.ownerEmitterId) && !mergableSwarm.ownerEmitterId) {
-            swarm.augmentDotCount(mergableSwarm.dotCount);
-            this.removeSwarm(mergableSwarm.swarmId);
-            mergableSwarm = swarm;
+            const remainder = swarm.augmentDotCount(mergableSwarm.dotCount);
+            if (remainder > 0) {
+              mergableSwarm.augmentDotCount(remainder - mergableSwarm.dotCount);
+            } else {
+              this.removeSwarm(mergableSwarm.swarmId);
+              mergableSwarm = swarm;
+              merged = true;
+            }
           } else {
             if (swarm.ownerEmitterId) {
               continue;
             }
-            mergableSwarm.augmentDotCount(swarm.dotCount);
-            this.removeSwarm(swarm.swarmId);
+            const remainder = mergableSwarm.augmentDotCount(swarm.dotCount);
+            if (remainder > 0) {
+              swarm.augmentDotCount(remainder - swarm.dotCount);
+            } else {
+              this.removeSwarm(swarm.swarmId);
+              merged = true;
+            }
           }
-          merged = true;
           break;
         }
       }

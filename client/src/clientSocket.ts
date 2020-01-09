@@ -3,7 +3,8 @@ import {ClientToServerMessage, ServerToClientMessage} from '../../common/src/mod
 export class ClientSocket {
   private socket?: WebSocket;
   connect(onOpen: () => void, onMessage: (messages: ServerToClientMessage[]) => void) {
-    this.socket = new WebSocket('wss://game.quickga.me');
+    // this.socket = new WebSocket('wss://game.quickga.me');
+    this.socket = new WebSocket('ws://localhost:8081');
     this.socket.onopen = () => {
       onOpen();
     };

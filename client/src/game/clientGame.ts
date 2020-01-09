@@ -465,21 +465,3 @@ export class ClientGame {
     this.emitters.splice(emitterIndex, 1);
   }
 }
-
-/*todo
- *  dont merge if the emitter is too big
- *  dont merge if the swarm is too big
- *  dont heal dead if attacked in the last 10 ticks
- *  limit the amount of data sent over the wire, buffer
- *  compensate for lag, dont just use 1000/60
- *  compensate for resync when a device hasnt been active for minute
- *  deploy to aws
- *  come up with name
- *  replace sprites
- *  balance game
- *  add login
- *    add name to join
- *  add leaderboard
- *    add mongo?
- *
- * */

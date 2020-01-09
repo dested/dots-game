@@ -1,4 +1,5 @@
 import {BaseDotSwarm} from '../../../common/src/game/baseDotSwarm';
+import {GameConstants} from '../../../common/src/game/gameConstants';
 import {MathUtils} from '../../../common/src/utils/mathUtils';
 import {ServerDeadEmitter} from './serverDeadEmitter';
 import {ServerGame} from './serverGame';
@@ -22,12 +23,23 @@ export class ServerDotSwarm extends BaseDotSwarm {
     if (dotCount === 0) {
       return;
     }
-    this.dotCount = this.dotCount + dotCount;
-    this.game.sendMessageToClients({
-      type: 'augment-dot-count',
-      swarmId: this.swarmId,
-      dotCount,
-    });
+    let remainder = 0;
+    if (dotCount > 0 && this.dotCount + dotCount > GameConstants.maxDotsPerSwarm) {
+      const newDotCount = GameConstants.maxDotsPerSwarm - this.dotCount;
+      remainder = dotCount - newDotCount;
+      this.dotCount = GameConstants.maxDotsPerSwarm;
+      dotCount = newDotCount;
+    } else {
+      this.dotCount = this.dotCount + dotCount;
+    }
+    if (dotCount !== 0) {
+      this.game.sendMessageToClients({
+        type: 'augment-dot-count',
+        swarmId: this.swarmId,
+        dotCount,
+      });
+    }
+    return remainder;
   }
 
   serverTick(duration: number) {

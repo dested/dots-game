@@ -1,0 +1,15 @@
+#todo
+ - [x] dont merge if the emitter is too big
+ - [x] dont merge if the swarm is too big
+ - [x] dont regen life if just attacked
+ - [ ] limit the amount of data sent over the wire, buffer
+ - [ ] compensate for lag, dont just use 1000/60
+ - [ ] compensate for resync when a device hasnt been active for minute
+ - [x] deploy to aws
+ - [ ] come up with name
+ - [ ] replace sprites
+ - [ ] balance game
+ - [ ] add login
+ - [ ]   add name to join
+ - [ ] add leaderboard
+ - [ ]   add mongo?
