@@ -142,7 +142,7 @@ export class ServerGame {
   }
 
   serverTick(tickIndex: number, duration: number) {
-    console.log('tick', tickIndex, this.teams.length, this.queuedMessages.length);
+    // console.log('tick', tickIndex, this.teams.length, this.queuedMessages.length);
     for (const q of this.queuedMessages) {
       switch (q.message.type) {
         case 'join':
