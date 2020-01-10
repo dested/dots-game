@@ -8,7 +8,7 @@ export type ClientToServerMessage =
       type: 'move-dots';
       x: number;
       y: number;
-      swarms: {swarmId: string; percent: number}[];
+      swarms: {swarmId: number; percent: number}[];
     };
 
 export type ServerToClientMessage =
@@ -21,26 +21,26 @@ export type ServerToClientMessage =
   | ({
       type: 'game-data';
     } & GameConfig)
-  | {type: 'new-emitter'; x: number; y: number; power: number; emitterId: string; teamId: string}
+  | {type: 'new-emitter'; x: number; y: number; power: number; emitterId: number; teamId: string}
   | {type: 'dead'}
-  | {type: 'new-dead-emitter'; x: number; y: number; power: number; emitterId: string}
-  | {type: 'set-dead-emitter-life'; life: number; emitterId: string}
-  | {type: 'remove-swarm'; swarmId: string}
-  | {type: 'kill-emitter'; emitterId: string}
-  | {type: 'remove-emitter'; emitterId: string}
-  | {type: 'augment-dot-count'; swarmId: string; dotCount: number}
+  | {type: 'new-dead-emitter'; x: number; y: number; power: number; emitterId: number}
+  | {type: 'set-dead-emitter-life'; life: number; emitterId: number}
+  | {type: 'remove-swarm'; swarmId: number}
+  | {type: 'kill-emitter'; emitterId: number}
+  | {type: 'remove-emitter'; emitterId: number}
+  | {type: 'augment-dot-count'; swarmId: number; dotCount: number}
   | {type: 'set-team-data'; teams: {teamId: string; color: string}[]}
   | {
       type: 'new-swarm';
       x: number;
       y: number;
-      swarmId: string;
-      ownerEmitterId: string | null;
+      swarmId: number;
+      ownerEmitterId: number | null;
       teamId: string;
     }
   | {
       type: 'set-swarm-heading';
-      swarmId: string;
+      swarmId: number;
       x: number;
       y: number;
     };

@@ -8,7 +8,7 @@ export class ServerDotEmitter implements ServerEmitter {
     public x: number,
     public y: number,
     public power: number,
-    public emitterId: string,
+    public emitterId: number,
     public teamId: string,
     public isRootEmitter: boolean
   ) {}

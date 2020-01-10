@@ -180,7 +180,7 @@ export class ClientGame {
     setInterval(() => {
       const now = +new Date();
       this.tick(now - time);
-      time = now;
+      time = +new Date();
     }, 1000 / 60);
 
     const requestNextFrame = () => {
@@ -379,19 +379,19 @@ export class ClientGame {
     }
   }
 
-  addNewEmitter(emitterId: string, x: number, y: number, power: number, teamId: string) {
+  addNewEmitter(emitterId: number, x: number, y: number, power: number, teamId: string) {
     const dotEmitter = new ClientDotEmitter(this, x, y, power, emitterId, teamId);
     this.emitters.push(dotEmitter);
     return dotEmitter;
   }
 
-  addNewSwarm(swarmId: string, x: number, y: number, ownerEmitterId: string | null, teamId: string) {
+  addNewSwarm(swarmId: number, x: number, y: number, ownerEmitterId: number | null, teamId: string) {
     const dotSwarm = new ClientDotSwarm(this, swarmId, x, y, ownerEmitterId, teamId);
     this.swarms.push(dotSwarm);
     return dotSwarm;
   }
 
-  addNewDeadEmitter(emitterId: string, x: number, y: number, power: number) {
+  addNewDeadEmitter(emitterId: number, x: number, y: number, power: number) {
     this.emitters.push(new ClientDeadEmitter(this, x, y, power, emitterId));
   }
 
@@ -435,7 +435,7 @@ export class ClientGame {
     this.currentDragging = null;
   }
 
-  removeSwarm(swarmId: string) {
+  removeSwarm(swarmId: number) {
     const index = this.swarms.findIndex(a => a.swarmId === swarmId);
     if (index === -1) {
       throw new Error('Bunko remove swarm');
@@ -443,7 +443,7 @@ export class ClientGame {
     this.swarms.splice(index, 1);
   }
 
-  killEmitter(emitterId: string) {
+  killEmitter(emitterId: number) {
     const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
     if (emitterIndex === -1) {
       // debugger;
@@ -452,7 +452,7 @@ export class ClientGame {
     this.emitters.splice(emitterIndex, 1);
   }
 
-  removeEmitter(emitterId: string) {
+  removeEmitter(emitterId: number) {
     const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
     if (emitterIndex === -1) {
       // debugger;

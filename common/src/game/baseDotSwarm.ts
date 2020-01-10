@@ -7,10 +7,10 @@ export class BaseDotSwarm {
   move?: MoveDirection;
 
   constructor(
-    public swarmId: string,
+    public swarmId: number,
     public x: number,
     public y: number,
-    public ownerEmitterId: string | null,
+    public ownerEmitterId: number | null,
     public teamId: string
   ) {}
 
@@ -40,7 +40,7 @@ export class BaseDotSwarm {
       distance,
       directionX,
       directionY,
-      speed: 200,
+      speed: GameConstants.debug ? 200 : 50,
     };
   }
 }

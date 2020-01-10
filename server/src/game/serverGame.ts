@@ -4,12 +4,13 @@ import {ColorUtils} from '../../../common/src/utils/colorUtils';
 import {MathUtils} from '../../../common/src/utils/mathUtils';
 import {unreachable} from '../../../common/src/utils/unreachable';
 import {Utils} from '../../../common/src/utils/utils';
-import {uuid} from '../../../common/src/utils/uuid';
+import {nextId, uuid} from '../../../common/src/utils/uuid';
 import {ServerSocket} from '../serverSocket';
 import {ServerDeadEmitter} from './serverDeadEmitter';
 import {ServerDotEmitter} from './serverDotEmitter';
 import {ServerDotSwarm} from './serverDotSwarm';
 import {ServerEmitter} from './serverEmitter';
+import {switchServerEmitter} from './utils';
 
 export class ServerGame {
   emitters: ServerEmitter[] = [];
@@ -39,9 +40,12 @@ export class ServerGame {
     }
 
     let serverTick = 0;
+    let time = +new Date();
     setInterval(() => {
       try {
-        this.serverTick(++serverTick, 1000 / 5);
+        const now = +new Date();
+        this.serverTick(++serverTick, now - time);
+        time = +new Date();
       } catch (ex) {
         console.error(ex);
       }
@@ -99,7 +103,7 @@ export class ServerGame {
         color: c.color,
       })),
       emitters: this.emitters.map(a =>
-        this.switchServerEmitter(a, {
+        switchServerEmitter(a, {
           dead: e => ({
             type: 'dead',
             life: e.life,
@@ -131,7 +135,7 @@ export class ServerGame {
     });
 
     const emitter = this.addNewEmitter(startingX, startingY, 3, teamId, true);
-    this.addNewSwarm(startingX, startingY, 50, emitter.emitterId, teamId);
+    this.addNewSwarm(startingX, startingY, 110, emitter.emitterId, teamId);
     this.sendTeams();
   }
 
@@ -158,6 +162,7 @@ export class ServerGame {
           if (!client) {
             continue;
           }
+          debugger;
           this.moveDots(q.message.x, q.message.y, client.teamId, q.message.swarms);
           break;
         default:
@@ -172,7 +177,7 @@ export class ServerGame {
     }
 
     for (const swarm of this.swarms) {
-      if (tickIndex % 5 === 0) {
+      if (tickIndex % 5 === 0 && swarm.battledThisTick.length === 0) {
         if (!swarm.ownerEmitterId) {
           swarm.augmentDotCount(
             -Math.max(swarm.depleter + Math.floor(swarm.dotCount / 300) + (swarm.move ? -1 : 1), 0)
@@ -244,16 +249,18 @@ export class ServerGame {
   }
 
   addNewEmitter(x: number, y: number, power: number, teamId: string, isRootEmitter: boolean) {
-    power *= 10;
-    const emitterId = uuid();
+    if (GameConstants.debug) {
+      power *= 5;
+    }
+    const emitterId = nextId();
     const dotEmitter = new ServerDotEmitter(this, x, y, power, emitterId, teamId, isRootEmitter);
     this.emitters.push(dotEmitter);
     this.sendMessageToClients({type: 'new-emitter', x, y, power, emitterId, teamId});
     return dotEmitter;
   }
 
-  addNewSwarm(x: number, y: number, dotCount: number, ownerEmitterId: string | null, teamId: string) {
-    const swarmId = uuid();
+  addNewSwarm(x: number, y: number, dotCount: number, ownerEmitterId: number | null, teamId: string) {
+    const swarmId = nextId();
     const dotSwarm = new ServerDotSwarm(this, swarmId, x, y, ownerEmitterId, teamId);
     this.sendMessageToClients({type: 'new-swarm', x, y, swarmId, ownerEmitterId, teamId});
     dotSwarm.augmentDotCount(dotCount);
@@ -262,12 +269,12 @@ export class ServerGame {
   }
 
   addNewDeadEmitter(x: number, y: number, power: number) {
-    const emitterId = uuid();
+    const emitterId = nextId();
     this.emitters.push(new ServerDeadEmitter(this, x, y, power, emitterId));
     this.sendMessageToClients({type: 'new-dead-emitter', x, y, power, emitterId});
   }
 
-  moveDots(x: number, y: number, teamId: string, swarms: {swarmId: string; percent: number}[]) {
+  moveDots(x: number, y: number, teamId: string, swarms: {swarmId: number; percent: number}[]) {
     for (let i = this.swarms.length - 1; i >= 0; i--) {
       const swarm = this.swarms[i];
       const swarmMove = swarms.find(a => swarm.swarmId === a.swarmId);
@@ -289,7 +296,7 @@ export class ServerGame {
     }
   }
 
-  tryMergeSwarm(mergableSwarmId: string) {
+  tryMergeSwarm(mergableSwarmId: number) {
     let mergableSwarm = this.swarms.find(a => a.swarmId === mergableSwarmId)!;
     while (true) {
       let merged = false;
@@ -301,7 +308,6 @@ export class ServerGame {
           continue;
         }
         if (MathUtils.overlapCircles(swarm, mergableSwarm, 0)) {
-          debugger;
           if ((swarm.dotCount > mergableSwarm.dotCount || swarm.ownerEmitterId) && !mergableSwarm.ownerEmitterId) {
             const remainder = swarm.augmentDotCount(mergableSwarm.dotCount);
             if (remainder > 0) {
@@ -332,7 +338,7 @@ export class ServerGame {
     }
   }
 
-  removeSwarm(swarmId: string) {
+  removeSwarm(swarmId: number) {
     const index = this.swarms.findIndex(a => a.swarmId === swarmId);
     if (index === -1) {
       throw new Error('Bunko remove swarm');
@@ -345,7 +351,7 @@ export class ServerGame {
     });
   }
 
-  killEmitter(emitterId: string) {
+  killEmitter(emitterId: number) {
     const emitter = this.emitters.find(a => a.emitterId === emitterId)!;
     if (!emitter) {
       // debugger;
@@ -359,7 +365,7 @@ export class ServerGame {
     this.addNewDeadEmitter(emitter.x, emitter.y, emitter.power);
   }
 
-  removeEmitter(emitterId: string) {
+  removeEmitter(emitterId: number) {
     const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
     if (emitterIndex === -1) {
       throw new Error('Bunko remove emitter');
@@ -383,19 +389,6 @@ export class ServerGame {
 
   processMessage(connectionId: string, message: ClientToServerMessage) {
     this.queuedMessages.push({connectionId, message});
-  }
-
-  private switchServerEmitter<T1, T2>(
-    emitter: ServerEmitter,
-    result: {dot: (e: ServerDotEmitter) => T1; dead: (e: ServerDeadEmitter) => T2}
-  ): T1 | T2 {
-    if (emitter instanceof ServerDotEmitter) {
-      return result.dot(emitter);
-    }
-    if (emitter instanceof ServerDeadEmitter) {
-      return result.dead(emitter);
-    }
-    throw new Error('Emitter not found');
   }
 
   private sendTeams() {

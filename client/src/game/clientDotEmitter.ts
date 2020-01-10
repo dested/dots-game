@@ -10,7 +10,7 @@ export class ClientDotEmitter implements ClientEmitter {
     public x: number,
     public y: number,
     public power: number,
-    public emitterId: string,
+    public emitterId: number,
     public teamId: string
   ) {}
 

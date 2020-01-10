@@ -17,10 +17,10 @@ export class ClientDotSwarm extends BaseDotSwarm {
 
   constructor(
     public game: ClientGame,
-    swarmId: string,
+    swarmId: number,
     x: number,
     y: number,
-    ownerEmitterId: string | null,
+    ownerEmitterId: number | null,
     teamId: string
   ) {
     super(swarmId, x, y, ownerEmitterId, teamId);
@@ -141,6 +141,11 @@ export class ClientDotSwarm extends BaseDotSwarm {
       context.stroke();
       context.fill();
       context.restore();
+    }
+    if (GameConstants.debug) {
+      context.font = '30px bold';
+      context.fillStyle = 'yellow';
+      context.fillText(this.dotCount.toString(), 0, 0);
     }
     // this.context.fillText(this.dotCount + ' ' + MathUtils.sum(this.dots.map(a => a.value)), 0, 0);
     context.restore();

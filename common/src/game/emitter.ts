@@ -3,5 +3,5 @@ export interface Emitter {
   y: number;
   power: number;
   radius: number;
-  emitterId: string;
+  emitterId: number;
 }

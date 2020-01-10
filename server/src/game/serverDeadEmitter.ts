@@ -8,7 +8,7 @@ export class ServerDeadEmitter extends BaseDeadEmitter implements ServerEmitter 
   life = GameConstants.deadEmitterStartingLife;
   lastAttack = 0;
 
-  constructor(public game: ServerGame, x: number, y: number, power: number, emitterId: string) {
+  constructor(public game: ServerGame, x: number, y: number, power: number, emitterId: number) {
     super(x, y, power, emitterId);
   }
 

@@ -1,28 +1,11 @@
 export interface GameConfig {
-  emitters: (
-    | {
-        type: 'dot';
-        teamId: string;
-        x: number;
-        y: number;
-        emitterId: string;
-        power: number;
-      }
-    | {
-        type: 'dead';
-        x: number;
-        y: number;
-        emitterId: string;
-        life: number;
-        power: number;
-      }
-  )[];
+  emitters: GameConfigEmitter[];
   swarms: {
     teamId: string;
     x: number;
     y: number;
-    ownerEmitterId: string | null;
-    swarmId: string;
+    ownerEmitterId: number | null;
+    swarmId: number;
     dotCount: number;
     headingX?: number;
     headingY?: number;
@@ -31,3 +14,21 @@ export interface GameConfig {
   gameWidth: number;
   gameHeight: number;
 }
+
+export type GameConfigEmitter =
+  | {
+      type: 'dot';
+      teamId: string;
+      x: number;
+      y: number;
+      emitterId: number;
+      power: number;
+    }
+  | {
+      type: 'dead';
+      x: number;
+      y: number;
+      emitterId: number;
+      life: number;
+      power: number;
+    };

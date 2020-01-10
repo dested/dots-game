@@ -1,5 +1,8 @@
 import * as WebServer from 'ws';
+import {GameConstants} from '../../common/src/game/gameConstants';
 import {ClientToServerMessage, ServerToClientMessage} from '../../common/src/models/messages';
+import {ClientToServerMessageParser} from '../../common/src/parsers/clientToServerMessageParser';
+import {ServerToClientMessageParser} from '../../common/src/parsers/serverToClientMessageParser';
 import {uuid} from '../../common/src/utils/uuid';
 
 export class ServerSocket {
@@ -12,19 +15,23 @@ export class ServerSocket {
     onMessage: (connectionId: string, message: ClientToServerMessage) => void
   ) {
     const port = parseInt(process.env.PORT || '8081');
-    console.log(port, 'port');
     this.wss = new WebServer.Server({port});
     this.wss.on('error', (a: any, b: any) => {
       console.error('error', a, b);
     });
 
     this.wss.on('connection', ws => {
+      ws.binaryType = 'arraybuffer';
       const me = {socket: ws, connectionId: uuid()};
       console.log('new connection', me.connectionId);
       this.connections.push(me);
 
       ws.on('message', message => {
-        onMessage(me.connectionId, JSON.parse(message as string));
+        if (GameConstants.binaryTransport) {
+          onMessage(me.connectionId, ClientToServerMessageParser.toClientToServerMessage(message as ArrayBuffer));
+        } else {
+          onMessage(me.connectionId, JSON.parse(message as string));
+        }
       });
 
       ws.onclose = () => {
@@ -44,6 +51,16 @@ export class ServerSocket {
     if (!client) {
       return;
     }
-    client.socket.send(JSON.stringify(messages));
+    if (GameConstants.binaryTransport) {
+      const body = ServerToClientMessageParser.fromServerToClientMessages(messages);
+      this.totalBytesSent += body.byteLength;
+      client.socket.send(body);
+    } else {
+      const body = JSON.stringify(messages);
+      this.totalBytesSent += body.length * 2 + 1;
+      client.socket.send(body);
+    }
+    console.log(this.totalBytesSent);
   }
+  totalBytesSent = 0;
 }

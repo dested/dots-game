@@ -5,3 +5,7 @@ export function uuid() {
     return v.toString(16);
   });
 }
+let id = 1;
+export function nextId(): number {
+  return ++id;
+}

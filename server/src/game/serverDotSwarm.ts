@@ -7,17 +7,17 @@ import {ServerGame} from './serverGame';
 export class ServerDotSwarm extends BaseDotSwarm {
   constructor(
     public game: ServerGame,
-    swarmId: string,
+    swarmId: number,
     x: number,
     y: number,
-    ownerEmitterId: string | null,
+    ownerEmitterId: number | null,
     teamId: string
   ) {
     super(swarmId, x, y, ownerEmitterId, teamId);
   }
 
   depleter: number = 1;
-  battledThisTick: string[] = [];
+  battledThisTick: number[] = [];
 
   augmentDotCount(dotCount: number) {
     if (dotCount === 0) {

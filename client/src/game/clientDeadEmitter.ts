@@ -7,7 +7,7 @@ import {ClientGame} from './clientGame';
 
 export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter {
   life: number = GameConstants.deadEmitterStartingLife;
-  constructor(public game: ClientGame, x: number, y: number, power: number, emitterId: string) {
+  constructor(public game: ClientGame, x: number, y: number, power: number, emitterId: number) {
     super(x, y, power, emitterId);
   }
 
@@ -27,6 +27,11 @@ export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter 
     );
     context.stroke();
     context.fill();
+    if (GameConstants.debug) {
+      context.font = '30px bold';
+      context.fillStyle = 'red';
+      context.fillText(this.life.toString(), this.x, this.y);
+    }
     context.restore();
   }
 

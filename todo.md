@@ -2,9 +2,10 @@
  - [x] dont merge if the emitter is too big
  - [x] dont merge if the swarm is too big
  - [x] dont regen life if just attacked
- - [ ] limit the amount of data sent over the wire, buffer
- - [ ] if attacking, dont die
+ - [x] limit the amount of data sent over the wire, buffer
+ - [x] if attacking, dont die
  - [ ] somehow create new planet if you have more than 80% of max
+ - [ ] support for client disconnect
  - [ ] add way to send emoji
  - [ ] build ai
  - [ ] build 100 person stress test
