@@ -42,6 +42,9 @@ export class MathUtils {
   static inSquare(x: number, y: number, bx: number, by: number, bw: number, bh: number) {
     return x > bx && x < bx + bw && y > by && y < by + bh;
   }
+  static inCircle(x: number, y: number, bx: number, by: number, bradius: number) {
+    return Math.sqrt((bx - x) * (bx - x) + (by - y) * (by - y)) < bradius;
+  }
 
   static distance(x1: number, y1: number, x2: number, y2: number) {
     const a = x1 - x2;

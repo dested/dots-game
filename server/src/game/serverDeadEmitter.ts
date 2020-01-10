@@ -4,12 +4,15 @@ import {ServerEmitter} from './serverEmitter';
 import {ServerGame} from './serverGame';
 
 export class ServerDeadEmitter extends BaseDeadEmitter implements ServerEmitter {
-  duration = Math.round(Math.random() * GameConstants.deadEmitterStartingDuration);
-  life = GameConstants.deadEmitterStartingLife;
+  duration: number;
+  life: number;
   lastAttack = 0;
 
   constructor(public game: ServerGame, x: number, y: number, power: number, emitterId: number) {
     super(x, y, power, emitterId);
+
+    this.setDuration(Math.round(Math.random() * GameConstants.deadEmitterStartingDuration));
+    this.setLife(GameConstants.deadEmitterStartingLife);
   }
 
   serverTick() {
@@ -47,6 +50,7 @@ export class ServerDeadEmitter extends BaseDeadEmitter implements ServerEmitter 
       life,
     });
   }
+
   setDuration(duration: number) {
     this.duration = duration;
     this.game.sendMessageToClients({

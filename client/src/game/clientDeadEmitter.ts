@@ -20,7 +20,7 @@ export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter 
     context.strokeStyle = 'white';
     context.lineWidth = 3;
     context.fillStyle =
-      '#d4d4d4' + ColorUtils.getTransparentHex(this.duration / GameConstants.deadEmitterStartingDuration);
+      '#d4d4d4' + ColorUtils.getTransparentHex(1 - this.duration / GameConstants.deadEmitterStartingDuration);
 
     CanvasUtils.circle(
       context,

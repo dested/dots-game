@@ -1,4 +1,4 @@
-import {Manager, Pan, Press, Swipe, Tap} from 'hammerjs';
+import {Manager, Pan, Pinch, Press, Swipe, Tap} from 'hammerjs';
 import {GameConfig} from '../../../common/src/models/gameConfig';
 import {ClientToServerMessage, ServerToClientMessage} from '../../../common/src/models/messages';
 import {MathUtils} from '../../../common/src/utils/mathUtils';
@@ -22,7 +22,7 @@ export class ClientGame {
   private context: CanvasRenderingContext2D;
   private startDragging: {x: number; y: number} | null = null;
   private currentDragging: {x: number; y: number} | null = null;
-  private view: GameView;
+  view: GameView;
   connectionId: string;
   private socket: ClientSocket;
   private isDead: boolean = false;
@@ -78,21 +78,30 @@ export class ClientGame {
         return;
       }
       if (doubleTap) {
-        this.dragMove(this.view.x + e.center.x, this.view.y + e.center.y);
+        this.dragMove(
+          this.view.viewBox.x + this.view.transformPoint(e.center.x),
+          this.view.viewBox.y + this.view.transformPoint(e.center.y)
+        );
       } else {
-        this.view.setPosition(startViewX + (startX - e.center.x), startViewY + (startY - e.center.y));
+        this.view.setPosition(
+          startViewX + (startX - this.view.transformPoint(e.center.x)),
+          startViewY + (startY - this.view.transformPoint(e.center.y))
+        );
       }
     });
 
     manager.on('panstart', e => {
       if (doubleTap) {
-        this.startDragDown(this.view.x + e.center.x, this.view.y + e.center.y);
+        this.startDragDown(
+          this.view.viewBox.x + this.view.transformPoint(e.center.x),
+          this.view.viewBox.y + this.view.transformPoint(e.center.y)
+        );
       } else {
         swipeVelocity.x = swipeVelocity.y = 0;
-        startX = e.center.x;
-        startY = e.center.y;
-        startViewX = this.view.x;
-        startViewY = this.view.y;
+        startX = this.view.transformPoint(e.center.x);
+        startY = this.view.transformPoint(e.center.y);
+        startViewX = this.view.viewBox.x;
+        startViewY = this.view.viewBox.y;
       }
     });
 
@@ -119,11 +128,27 @@ export class ClientGame {
           }
         }
       }
+
+      const x = this.view.viewBox.x + this.view.transformPoint(e.center.x);
+      const y = this.view.viewBox.y + this.view.transformPoint(e.center.y);
+
+      for (const emitter of this.emitters) {
+        if (MathUtils.inCircle(x, y, emitter.x, emitter.y, emitter.radius)) {
+          if (selected) {
+          } else {
+            for (const dot of this.swarms.find(a => a.ownerEmitterId === emitter.emitterId)!.dots) {
+              dot.selected = true;
+            }
+            return;
+          }
+        }
+      }
+
       if (selected) {
         this.sendMessageToServer({
           type: 'move-dots',
-          x: this.view.x + e.center.x,
-          y: this.view.y + e.center.y,
+          x,
+          y,
           swarms: this.swarms
             .filter(a => a.dots.some(d => d.selected))
             .map(swarm => {
@@ -262,6 +287,7 @@ export class ClientGame {
       switch (message.type) {
         case 'joined':
           this.myTeamId = message.yourTeamId;
+          console.log(message.startingX, message.startingY);
           this.view.moveToPoint(message.startingX, message.startingY);
           break;
         case 'game-data':
@@ -348,21 +374,28 @@ export class ClientGame {
       return;
     }
 
-    const vBox = this.view.viewBox;
-
+    const outerBox = this.view.outerViewBox;
+    const box = this.view.viewBox;
     context.save();
-    context.translate(-this.view.x, -this.view.y);
+    context.fillStyle = 'white';
+    context.fillText(`${box.x} ${box.y} ${box.width} ${box.height}`, 100, 130);
+
+    context.scale(this.view.scale, this.view.scale);
+    context.translate(-box.x, -box.y);
+    context.lineWidth = 6;
+    context.strokeStyle = 'red';
+    context.strokeRect(box.x, box.y, box.width, box.height);
 
     const dragRect = this.dragRect();
 
     for (const emitter of this.emitters) {
-      if (!MathUtils.overlapSquare(emitter, vBox)) {
+      if (!MathUtils.overlapSquare(emitter, outerBox)) {
         continue;
       }
       emitter.draw(context);
     }
     for (const swarm of this.swarms) {
-      if (!MathUtils.overlapSquare(swarm, vBox)) {
+      if (!MathUtils.overlapSquare(swarm, outerBox)) {
         continue;
       }
 

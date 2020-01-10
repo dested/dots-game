@@ -72,6 +72,23 @@ const App: React.FC<{width: number; height: number}> = props => {
           </button>
         </div>
       )}
+      <div style={{position: 'absolute', bottom: 50, right: 50}}>
+        <button
+          onClick={() => {
+            client.current!.view.scale += 0.2;
+          }}
+        >
+          +
+        </button>
+
+        <button
+          onClick={() => {
+            client.current!.view.scale -= 0.2;
+          }}
+        >
+          -
+        </button>
+      </div>
     </div>
   );
 };

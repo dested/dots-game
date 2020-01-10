@@ -1,15 +1,22 @@
 import {AnimationUtils} from '../../../common/src/utils/animationUtils';
 
 export class GameView {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  private x: number;
+  private y: number;
+  private width: number;
+  private height: number;
 
   scale: number;
 
   gameWidth: number = 0;
   gameHeight: number = 0;
+
+  get center() {
+    return {
+      x: this.x + this.width / 2,
+      y: this.y + this.height / 2,
+    };
+  }
 
   constructor(private canvas: HTMLCanvasElement) {
     if (localStorage.getItem('view-x' + canvas.id)) {
@@ -28,27 +35,57 @@ export class GameView {
     this.scale = 1;
   }
 
-  get xSlop(): number {
-    return this.x - this.viewSlop;
+  get viewXSlop(): number {
+    const x = this.x - this.viewSlop;
+    return -(-x * this.scale);
   }
 
-  get ySlop(): number {
-    return this.y - this.viewSlop;
+  get viewYSlop(): number {
+    const y = this.y - this.viewSlop;
+    return -(-y * this.scale);
   }
 
-  get widthSlop(): number {
-    return this.width + this.viewSlop * 2;
+  get viewWidthSlop(): number {
+    return (this.width + this.viewSlop * 2) / this.scale;
   }
 
-  get heightSlop(): number {
-    return this.height + this.viewSlop * 2;
+  get viewHeightSlop(): number {
+    return (this.height + this.viewSlop * 2) / this.scale;
+  }
+
+  get viewX(): number {
+    return -(-this.x * this.scale);
+  }
+
+  get viewY(): number {
+    return -(-this.y * this.scale);
+  }
+
+  get viewWidth(): number {
+    return this.width / this.scale;
+  }
+
+  get viewHeight(): number {
+    return this.height / this.scale;
   }
 
   get viewBox() {
-    const vx = Math.round(this.xSlop);
-    const vy = Math.round(this.ySlop);
-    const vwidth = Math.round(this.widthSlop);
-    const vheight = Math.round(this.heightSlop);
+    const vx = Math.round(this.viewX);
+    const vy = Math.round(this.viewY);
+    const vwidth = Math.round(this.viewWidth);
+    const vheight = Math.round(this.viewHeight);
+    return {
+      x: vx,
+      y: vy,
+      width: vwidth,
+      height: vheight,
+    };
+  }
+  get outerViewBox() {
+    const vx = Math.round(this.viewXSlop);
+    const vy = Math.round(this.viewYSlop);
+    const vwidth = Math.round(this.viewWidthSlop);
+    const vheight = Math.round(this.viewHeightSlop);
     return {
       x: vx,
       y: vy,
@@ -126,14 +163,19 @@ export class GameView {
         this.setPosition(AnimationUtils.lerp(startX, endX, c), AnimationUtils.lerp(startY, endY, c));
       },
     });
-    AnimationUtils.start({
+
+    /* AnimationUtils.start({
       start: this.scale,
-      finish: 2,
+      finish: 1,
       duration: 250,
       easing: AnimationUtils.easings.easeInCubic,
       callback: c => {
         this.scale = c;
       },
-    });
+    });*/
+  }
+
+  transformPoint(p: number) {
+    return p / this.scale;
   }
 }
