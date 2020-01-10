@@ -123,6 +123,11 @@ export class ServerToClientMessageParser {
           buff.addInt32(message.x);
           buff.addInt32(message.y);
           break;
+        case 'set-dead-emitter-duration':
+          buff.addUint8(14);
+          buff.addInt32(message.emitterId);
+          buff.addInt16(message.duration);
+          break;
         default:
           throw unreachable(message);
       }
@@ -132,7 +137,7 @@ export class ServerToClientMessageParser {
 
   static toServerToClientMessages(buffer: ArrayBuffer): ServerToClientMessage[] {
     const reader = new ArrayBufferReader(buffer);
-    const result = reader.loop(() => {
+    return reader.loop(() => {
       const type = reader.readUint8();
       switch (type) {
         case 1:
@@ -162,9 +167,8 @@ export class ServerToClientMessageParser {
               ownerEmitterId: reader.readOptionalInt32(),
             })),
             emitters: reader.loop(() =>
-              reader.switch<1 | 2, GameConfigEmitter>([
-                null,
-                () => ({
+              reader.switch<1 | 2, GameConfigEmitter>({
+                1: () => ({
                   type: 'dot',
                   teamId: reader.readString(),
                   emitterId: reader.readInt32(),
@@ -172,7 +176,7 @@ export class ServerToClientMessageParser {
                   y: reader.readInt32(),
                   power: reader.readUint8(),
                 }),
-                () => ({
+                2: () => ({
                   type: 'dead',
                   emitterId: reader.readInt32(),
                   x: reader.readInt32(),
@@ -180,7 +184,7 @@ export class ServerToClientMessageParser {
                   power: reader.readUint8(),
                   life: reader.readUint16(),
                 }),
-              ])
+              })
             ),
           };
         case 3:
@@ -256,13 +260,15 @@ export class ServerToClientMessageParser {
             x: reader.readInt32(),
             y: reader.readInt32(),
           };
-
+        case 14:
+          return {
+            type: 'set-dead-emitter-duration',
+            emitterId: reader.readInt32(),
+            duration: reader.readInt16(),
+          };
         default:
           throw new Error('Missing buffer enum');
       }
     });
-    console.log(JSON.stringify(result));
-
-    return result;
   }
 }

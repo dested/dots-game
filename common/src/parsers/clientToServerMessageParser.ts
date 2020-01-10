@@ -20,6 +20,9 @@ export class ClientToServerMessageParser {
           buff.addFloat64(swarm.percent);
         }
         break;
+      case 'resync':
+        buff.addUint8(3);
+        break;
       default:
         throw unreachable(message);
     }
@@ -46,6 +49,10 @@ export class ClientToServerMessageParser {
           })),
         };
       }
+      case 3:
+        return {
+          type: 'resync',
+        };
       default:
         throw new Error('Missing buffer enum');
     }

@@ -10,7 +10,7 @@ export class BaseDotSwarm {
     public swarmId: number,
     public x: number,
     public y: number,
-    public ownerEmitterId: number | null,
+    public ownerEmitterId: number | undefined,
     public teamId: string
   ) {}
 

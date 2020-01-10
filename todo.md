@@ -3,7 +3,6 @@
  - [ ] add way to send emoji
  - [ ] build ai
  - [ ] build 100 person stress test
- - [ ] compensate for resync when a device hasnt been active for minute
  - [ ] come up with name
  - [ ] replace sprites
  - [ ] balance game
@@ -11,6 +10,9 @@
  - [ ]   add name to join
  - [ ] add leaderboard
  - [ ]   add mongo?
+ - [ ] add zoom out
+ - [x] compensate for resync when a device hasnt been active for minute
+ - [x] send duration to client
  - [x] dont merge if the emitter is too big
  - [x] dont merge if the swarm is too big
  - [x] dont regen life if just attacked

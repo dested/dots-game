@@ -1,13 +1,4 @@
 export class ColorUtils {
-  static shade(col: string, amt: number) {
-    /*
-    const n = +('0x' + col.replace('#', '')) + amt * 0x010101;
-    const s = n.toString(16);
-    const s1 = s.padStart(6, '0');
-    return '#' + s1;*/
-    return col;
-  }
-
   static randomColor() {
     return this.HSLToRGB(360 * Math.random(), 25 + 70 * Math.random(), 50 + 10 * Math.random());
   }
@@ -63,5 +54,11 @@ export class ColorUtils {
     const s1 = `#${rgbToHex(r)}${rgbToHex(g)}${rgbToHex(b)}`;
 
     return s1;
+  }
+
+  static getTransparentHex(percent: number) {
+    const values = Math.max(percent * 255, 0);
+    const x = Math.min(values, 255);
+    return Math.round(x).toString(16);
   }
 }

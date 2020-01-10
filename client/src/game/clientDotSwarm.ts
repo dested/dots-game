@@ -20,7 +20,7 @@ export class ClientDotSwarm extends BaseDotSwarm {
     swarmId: number,
     x: number,
     y: number,
-    ownerEmitterId: number | null,
+    ownerEmitterId: number | undefined,
     teamId: string
   ) {
     super(swarmId, x, y, ownerEmitterId, teamId);
@@ -133,12 +133,9 @@ export class ClientDotSwarm extends BaseDotSwarm {
       ) {
         context.fillStyle = 'white';
       } else {
-        context.strokeStyle = 'white';
-        context.fillStyle = ColorUtils.shade(this.game.teams.find(t => t.teamId === this.teamId)!.color, 10);
+        context.fillStyle = this.game.teams.find(t => t.teamId === this.teamId)!.color + 'aa';
       }
-      context.lineWidth = 1;
       CanvasUtils.circle(context, dot.x, dot.y, 1 + dot.value);
-      context.stroke();
       context.fill();
       context.restore();
     }

@@ -29,7 +29,7 @@ export class ClientDotEmitter implements ClientEmitter {
       // debugger;
       throw new Error('bunkop team' + this.teamId);
     }
-    context.fillStyle = ColorUtils.shade(team.color, 20) + 'aa';
+    context.fillStyle = team.color + 'aa';
     const swarm = this.game.swarms.find(a => a.ownerEmitterId === this.emitterId);
     if (!swarm) {
       // debugger;

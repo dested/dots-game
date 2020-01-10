@@ -4,6 +4,6 @@ export class GameConstants {
   static maxDotsPerSwarm = 500;
   static deadEmitterStartingDuration = 1000;
   static deadEmitterStartingLife = 100;
-  static debug = false;
+  static debug = true;
   static binaryTransport = true;
 }

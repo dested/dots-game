@@ -35,7 +35,7 @@ export class ClientGame {
 
     const manager = new Manager(this.canvas);
     manager.add(new Press({time: 0}));
-    manager.add(new Tap({event: 'doubletap', taps: 2})).recognizeWith(manager.get('press'));
+    manager.add(new Tap({event: 'doubletap', taps: 2, interval: 500})).recognizeWith(manager.get('press'));
     manager
       .add(new Tap({taps: 1}))
       .requireFailure('doubletap')
@@ -177,9 +177,21 @@ export class ClientGame {
     // this.context.globalAlpha = 0.7;
 
     let time = +new Date();
+    let paused = 0;
     setInterval(() => {
       const now = +new Date();
-      this.tick(now - time);
+      const duration = now - time;
+      if (duration > 900 || duration < 4) {
+        paused++;
+      } else {
+        if (paused > 3) {
+          paused = 0;
+          this.sendMessageToServer({
+            type: 'resync',
+          });
+        }
+      }
+      this.tick(duration);
       time = +new Date();
     }, 1000 / 60);
 
@@ -221,6 +233,8 @@ export class ClientGame {
     this.view.gameWidth = gameConfig.gameWidth;
     this.view.gameHeight = gameConfig.gameHeight;
     this.teams = gameConfig.teams;
+    this.emitters = [];
+    this.swarms = [];
     for (const emitter of gameConfig.emitters) {
       switch (emitter.type) {
         case 'dot':
@@ -251,6 +265,7 @@ export class ClientGame {
           this.view.moveToPoint(message.startingX, message.startingY);
           break;
         case 'game-data':
+          console.log('got gamedata');
           this.fillGameData(message);
           break;
         case 'new-emitter':
@@ -264,6 +279,14 @@ export class ClientGame {
             const emitter = this.emitters.find(a => a.emitterId === message.emitterId);
             if (emitter && emitter instanceof ClientDeadEmitter) {
               emitter.setLife(message.life);
+            }
+          }
+          break;
+        case 'set-dead-emitter-duration':
+          {
+            const emitter = this.emitters.find(a => a.emitterId === message.emitterId);
+            if (emitter && emitter instanceof ClientDeadEmitter) {
+              emitter.setDuration(message.duration);
             }
           }
           break;
@@ -389,7 +412,7 @@ export class ClientGame {
     return dotEmitter;
   }
 
-  addNewSwarm(swarmId: number, x: number, y: number, ownerEmitterId: number | null, teamId: string) {
+  addNewSwarm(swarmId: number, x: number, y: number, ownerEmitterId: number | undefined, teamId: string) {
     const dotSwarm = new ClientDotSwarm(this, swarmId, x, y, ownerEmitterId, teamId);
     this.swarms.push(dotSwarm);
     return dotSwarm;

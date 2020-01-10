@@ -7,6 +7,8 @@ import {ClientGame} from './clientGame';
 
 export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter {
   life: number = GameConstants.deadEmitterStartingLife;
+  duration: number = GameConstants.deadEmitterStartingDuration;
+
   constructor(public game: ClientGame, x: number, y: number, power: number, emitterId: number) {
     super(x, y, power, emitterId);
   }
@@ -17,7 +19,8 @@ export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter 
     context.save();
     context.strokeStyle = 'white';
     context.lineWidth = 3;
-    context.fillStyle = ColorUtils.shade('#d4d4d4', 50) + 'aa';
+    context.fillStyle =
+      '#d4d4d4' + ColorUtils.getTransparentHex(this.duration / GameConstants.deadEmitterStartingDuration);
 
     CanvasUtils.circle(
       context,
@@ -37,5 +40,9 @@ export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter 
 
   setLife(life: number) {
     this.life = life;
+  }
+
+  setDuration(duration: number) {
+    this.duration = duration;
   }
 }

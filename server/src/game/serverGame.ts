@@ -94,45 +94,8 @@ export class ServerGame {
 
     this.teams.push({teamId, connectionId, color});
     this.sendMessageToClient(connectionId, {type: 'joined', yourTeamId: teamId, startingX, startingY});
-    this.sendMessageToClient(connectionId, {
-      type: 'game-data',
-      gameWidth: this.gameWidth,
-      gameHeight: this.gameHeight,
-      teams: this.teams.map(c => ({
-        teamId: c.teamId,
-        color: c.color,
-      })),
-      emitters: this.emitters.map(a =>
-        switchServerEmitter(a, {
-          dead: e => ({
-            type: 'dead',
-            life: e.life,
-            emitterId: e.emitterId,
-            x: e.x,
-            y: e.y,
-            power: e.power,
-          }),
-          dot: e => ({
-            type: 'dot',
-            teamId: e.teamId,
-            emitterId: e.emitterId,
-            x: e.x,
-            y: e.y,
-            power: e.power,
-          }),
-        })
-      ),
-      swarms: this.swarms.map(a => ({
-        teamId: a.teamId,
-        ownerEmitterId: a.ownerEmitterId,
-        x: a.x,
-        y: a.y,
-        swarmId: a.swarmId,
-        dotCount: a.dotCount,
-        headingX: a.move?.headingX,
-        headingY: a.move?.headingY,
-      })),
-    });
+
+    this.sendGameData(connectionId);
 
     const emitter = this.addNewEmitter(startingX, startingY, 3, teamId, true);
     this.addNewSwarm(startingX, startingY, 110, emitter.emitterId, teamId);
@@ -162,8 +125,10 @@ export class ServerGame {
           if (!client) {
             continue;
           }
-          debugger;
           this.moveDots(q.message.x, q.message.y, client.teamId, q.message.swarms);
+          break;
+        case 'resync':
+          this.sendGameData(q.connectionId);
           break;
         default:
           unreachable(q.message);
@@ -397,6 +362,48 @@ export class ServerGame {
       teams: this.teams.map(c => ({
         teamId: c.teamId,
         color: c.color,
+      })),
+    });
+  }
+
+  private sendGameData(connectionId: string) {
+    this.sendMessageToClient(connectionId, {
+      type: 'game-data',
+      gameWidth: this.gameWidth,
+      gameHeight: this.gameHeight,
+      teams: this.teams.map(c => ({
+        teamId: c.teamId,
+        color: c.color,
+      })),
+      emitters: this.emitters.map(a =>
+        switchServerEmitter(a, {
+          dead: e => ({
+            type: 'dead',
+            life: e.life,
+            emitterId: e.emitterId,
+            x: e.x,
+            y: e.y,
+            power: e.power,
+          }),
+          dot: e => ({
+            type: 'dot',
+            teamId: e.teamId,
+            emitterId: e.emitterId,
+            x: e.x,
+            y: e.y,
+            power: e.power,
+          }),
+        })
+      ),
+      swarms: this.swarms.map(a => ({
+        teamId: a.teamId,
+        ownerEmitterId: a.ownerEmitterId,
+        x: a.x,
+        y: a.y,
+        swarmId: a.swarmId,
+        dotCount: a.dotCount,
+        headingX: a.move?.headingX,
+        headingY: a.move?.headingY,
       })),
     });
   }

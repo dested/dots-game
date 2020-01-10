@@ -60,7 +60,7 @@ export class ServerSocket {
       this.totalBytesSent += body.length * 2 + 1;
       client.socket.send(body);
     }
-    console.log(this.totalBytesSent);
+    // console.log(this.totalBytesSent);
   }
   totalBytesSent = 0;
 }

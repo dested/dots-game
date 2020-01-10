@@ -4,7 +4,7 @@ export interface GameConfig {
     teamId: string;
     x: number;
     y: number;
-    ownerEmitterId: number | null;
+    ownerEmitterId?: number;
     swarmId: number;
     dotCount: number;
     headingX?: number;

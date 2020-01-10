@@ -49,5 +49,10 @@ export class ServerDeadEmitter extends BaseDeadEmitter implements ServerEmitter 
   }
   setDuration(duration: number) {
     this.duration = duration;
+    this.game.sendMessageToClients({
+      type: 'set-dead-emitter-duration',
+      emitterId: this.emitterId,
+      duration,
+    });
   }
 }

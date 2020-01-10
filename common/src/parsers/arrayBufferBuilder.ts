@@ -42,7 +42,7 @@ export class ArrayBufferBuilder {
       size: 32,
     });
   }
-  addOptionalInt32(value: number) {
+  addOptionalInt32(value?: number) {
     if (value === undefined) {
       this.addInt32(-1);
     } else {
@@ -187,7 +187,7 @@ export class ArrayBufferReader {
     return items;
   }
 
-  switch<TOptions extends number, TResult>(callback: (() => TResult)[]): TResult {
+  switch<TOptions extends number, TResult>(callback: {[key in TOptions]: () => TResult}): TResult {
     const option = this.readUint8() as TOptions;
     return callback[option]();
   }
