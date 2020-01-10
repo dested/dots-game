@@ -5,22 +5,31 @@ import {ServerToClientMessageParser} from '../../common/src/parsers/serverToClie
 
 export class ClientSocket {
   private socket?: WebSocket;
-  connect(onOpen: () => void, onMessage: (messages: ServerToClientMessage[]) => void) {
+  connect(options: {
+    onOpen: () => void;
+    onMessage: (messages: ServerToClientMessage[]) => void;
+    onDisconnect: () => void;
+  }) {
     // this.socket = new WebSocket('wss://game.quickga.me');
     this.socket = new WebSocket('ws://localhost:8081');
     this.socket.binaryType = 'arraybuffer';
     this.socket.onopen = () => {
-      onOpen();
+      options.onOpen();
     };
     this.socket.onerror = e => {
       console.log(e);
+      this.socket?.close();
+      options.onDisconnect();
     };
     this.socket.onmessage = e => {
       if (GameConstants.binaryTransport) {
-        onMessage(ServerToClientMessageParser.toServerToClientMessages(e.data));
+        options.onMessage(ServerToClientMessageParser.toServerToClientMessages(e.data));
       } else {
-        onMessage(JSON.parse(e.data));
+        options.onMessage(JSON.parse(e.data));
       }
+    };
+    this.socket.onclose = () => {
+      options.onDisconnect();
     };
   }
 

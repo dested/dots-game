@@ -27,7 +27,7 @@ export class ClientGame {
   private socket: ClientSocket;
   private isDead: boolean = false;
 
-  constructor(private options: {onDied: () => void}) {
+  constructor(private options: {onDied: () => void; onDisconnect: () => void}) {
     this.connectionId = uuid();
 
     this.canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -192,14 +192,18 @@ export class ClientGame {
     requestNextFrame();
 
     this.socket = new ClientSocket();
-    this.socket.connect(
-      () => {
+    this.socket.connect({
+      onOpen: () => {
         this.sendMessageToServer({type: 'join'});
       },
-      messages => {
+      onDisconnect: () => {
+        options.onDisconnect();
+      },
+
+      onMessage: messages => {
         this.processMessages(messages);
-      }
-    );
+      },
+    });
   }
 
   rejoin() {
