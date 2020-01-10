@@ -3,7 +3,13 @@
  - [x] dont merge if the swarm is too big
  - [x] dont regen life if just attacked
  - [ ] limit the amount of data sent over the wire, buffer
- - [ ] compensate for lag, dont just use 1000/60
+ - [ ] if attacking, dont die
+ - [ ] somehow create new planet if you have more than 80% of max
+ - [ ] add way to send emoji
+ - [ ] build ai
+ - [ ] build 100 person stress test
+ - [x] rect not ellipse
+ - [x] compensate for lag, dont just use 1000/60
  - [ ] compensate for resync when a device hasnt been active for minute
  - [x] deploy to aws
  - [ ] come up with name

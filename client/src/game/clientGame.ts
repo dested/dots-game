@@ -176,8 +176,11 @@ export class ClientGame {
 
     // this.context.globalAlpha = 0.7;
 
+    let time = +new Date();
     setInterval(() => {
-      this.tick(1000 / 60);
+      const now = +new Date();
+      this.tick(now - time);
+      time = now;
     }, 1000 / 60);
 
     const requestNextFrame = () => {
@@ -323,7 +326,7 @@ export class ClientGame {
     context.save();
     context.translate(-this.view.x, -this.view.y);
 
-    const dragEllipse = this.dragEllipse();
+    const dragRect = this.dragRect();
 
     for (const emitter of this.emitters) {
       if (!MathUtils.overlapSquare(emitter, vBox)) {
@@ -336,15 +339,15 @@ export class ClientGame {
         continue;
       }
 
-      swarm.draw(context, dragEllipse);
+      swarm.draw(context, dragRect);
     }
 
-    if (!this.isDead && dragEllipse) {
+    if (!this.isDead && dragRect) {
       context.save();
       context.strokeStyle = 'white';
       context.lineWidth = 1;
       context.fillStyle = 'rgba(204,111,2,0.4)';
-      CanvasUtils.ellipse(context, dragEllipse.x, dragEllipse.y, dragEllipse.radiusX, dragEllipse.radiusY);
+      CanvasUtils.rect(context, dragRect.x, dragRect.y, dragRect.width, dragRect.height);
       context.stroke();
       context.fill();
       context.restore();
@@ -352,13 +355,13 @@ export class ClientGame {
     context.restore();
   }
 
-  dragEllipse() {
+  dragRect() {
     if (this.startDragging && this.currentDragging) {
       return {
-        x: this.startDragging.x + (this.currentDragging.x - this.startDragging.x) / 2,
-        y: this.startDragging.y + (this.currentDragging.y - this.startDragging.y) / 2,
-        radiusX: Math.abs((this.startDragging.x - this.currentDragging.x) / 2),
-        radiusY: Math.abs((this.startDragging.y - this.currentDragging.y) / 2),
+        x: this.startDragging.x < this.currentDragging.x ? this.startDragging.x : this.currentDragging.x,
+        y: this.startDragging.y < this.currentDragging.y ? this.startDragging.y : this.currentDragging.y,
+        width: Math.abs(this.currentDragging.x - this.startDragging.x),
+        height: Math.abs(this.currentDragging.y - this.startDragging.y),
       };
     }
     return undefined;
@@ -414,21 +417,14 @@ export class ClientGame {
       return;
     }
 
-    const dragEllipse = this.dragEllipse()!;
+    const dragRect = this.dragRect()!;
     for (const swarm of this.swarms) {
       if (swarm.teamId !== this.myTeamId) {
         continue;
       }
       for (const dot of swarm.dots) {
         if (
-          MathUtils.inEllipse(
-            dragEllipse.x,
-            dragEllipse.y,
-            dragEllipse.radiusX,
-            dragEllipse.radiusY,
-            swarm.x + dot.x,
-            swarm.y + dot.y
-          )
+          MathUtils.inSquare(swarm.x + dot.x, swarm.y + dot.y, dragRect.x, dragRect.y, dragRect.width, dragRect.height)
         ) {
           dot.selected = true;
         }

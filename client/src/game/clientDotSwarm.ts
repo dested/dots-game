@@ -113,7 +113,7 @@ export class ClientDotSwarm extends BaseDotSwarm {
     }
   }
 
-  draw(context: CanvasRenderingContext2D, dragEllipse?: {x: number; y: number; radiusX: number; radiusY: number}) {
+  draw(context: CanvasRenderingContext2D, dragRect?: {x: number; y: number; width: number; height: number}) {
     if (false && !this.ownerEmitterId) {
       context.save();
       context.fillStyle = 'rgba(160,109,175,0.7)';
@@ -127,16 +127,9 @@ export class ClientDotSwarm extends BaseDotSwarm {
       context.save();
       if (
         dot.selected ||
-        (dragEllipse &&
+        (dragRect &&
           this.teamId === this.game.myTeamId &&
-          MathUtils.inEllipse(
-            dragEllipse.x,
-            dragEllipse.y,
-            dragEllipse.radiusX,
-            dragEllipse.radiusY,
-            this.x + dot.x,
-            this.y + dot.y
-          ))
+          MathUtils.inSquare(this.x + dot.x, this.y + dot.y, dragRect.x, dragRect.y, dragRect.width, dragRect.height))
       ) {
         context.fillStyle = 'white';
       } else {

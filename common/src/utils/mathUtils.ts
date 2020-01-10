@@ -5,9 +5,9 @@ export class MathUtils {
   static randomItem<T>(item: T[]): T {
     return item[Math.floor(Math.random() * item.length)];
   }
-  static inEllipse(x: number, y: number, radiusX: number, radiusY: number, pointX: number, pointY: number) {
+  /*  static inEllipse(x: number, y: number, radiusX: number, radiusY: number, pointX: number, pointY: number) {
     return Math.pow(pointX - x, 2) / Math.pow(radiusX, 2) + Math.pow(pointY - y, 2) / Math.pow(radiusY, 2) <= 1;
-  }
+  }*/
 
   static headingX(heading: Heading) {
     const p = AnimationUtils.easings.linear(heading.timing);
@@ -34,8 +34,13 @@ export class MathUtils {
       (left.radius + additionalRadius + (right.radius + additionalRadius));
     return distSq === radSumSq || distSq <= radSumSq;
   }
+
   static overlapSquare(point: {x: number; y: number}, box: {x: number; y: number; width: number; height: number}) {
-    return point.x > box.x && point.x < box.x + box.width && point.y > box.y && point.y < box.y + box.height;
+    return this.inSquare(point.x, point.y, box.x, box.y, box.width, box.height);
+  }
+
+  static inSquare(x: number, y: number, bx: number, by: number, bw: number, bh: number) {
+    return x > bx && x < bx + bw && y > by && y < by + bh;
   }
 
   static distance(x1: number, y1: number, x2: number, y2: number) {
