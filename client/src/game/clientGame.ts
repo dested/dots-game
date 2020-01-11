@@ -378,8 +378,6 @@ export class ClientGame {
     const box = this.view.viewBox;
     context.save();
     context.fillStyle = 'white';
-    context.fillText(`${box.x} ${box.y} ${box.width} ${box.height}`, 100, 130);
-
     context.scale(this.view.scale, this.view.scale);
     context.translate(-box.x, -box.y);
     context.lineWidth = 6;

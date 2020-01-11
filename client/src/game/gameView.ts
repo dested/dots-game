@@ -13,8 +13,8 @@ export class GameView {
 
   get center() {
     return {
-      x: this.x + this.width / 2,
-      y: this.y + this.height / 2,
+      x: this.viewX + this.viewWidth / 2,
+      y: this.viewY + this.viewHeight / 2,
     };
   }
 
@@ -37,12 +37,12 @@ export class GameView {
 
   get viewXSlop(): number {
     const x = this.x - this.viewSlop;
-    return -(-x * this.scale);
+    return x;
   }
 
   get viewYSlop(): number {
     const y = this.y - this.viewSlop;
-    return -(-y * this.scale);
+    return y;
   }
 
   get viewWidthSlop(): number {
@@ -54,11 +54,11 @@ export class GameView {
   }
 
   get viewX(): number {
-    return -(-this.x * this.scale);
+    return this.x;
   }
 
   get viewY(): number {
-    return -(-this.y * this.scale);
+    return this.y;
   }
 
   get viewWidth(): number {
@@ -70,10 +70,10 @@ export class GameView {
   }
 
   get viewBox() {
-    const vx = Math.round(this.viewX);
-    const vy = Math.round(this.viewY);
-    const vwidth = Math.round(this.viewWidth);
-    const vheight = Math.round(this.viewHeight);
+    const vx = this.viewX;
+    const vy = this.viewY;
+    const vwidth = this.viewWidth;
+    const vheight = this.viewHeight;
     return {
       x: vx,
       y: vy,
@@ -82,10 +82,10 @@ export class GameView {
     };
   }
   get outerViewBox() {
-    const vx = Math.round(this.viewXSlop);
-    const vy = Math.round(this.viewYSlop);
-    const vwidth = Math.round(this.viewWidthSlop);
-    const vheight = Math.round(this.viewHeightSlop);
+    const vx = this.viewXSlop;
+    const vy = this.viewYSlop;
+    const vwidth = this.viewWidthSlop;
+    const vheight = this.viewHeightSlop;
     return {
       x: vx,
       y: vy,
@@ -110,6 +110,7 @@ export class GameView {
   }
 
   private clamp() {
+    return;
     const gutter = 0.2;
     const reverseGutter = 1 - gutter;
 
@@ -142,7 +143,7 @@ export class GameView {
       duration: 250,
       easing: AnimationUtils.easings.easeInCubic,
       callback: c => {
-        this.scale = c;
+        this.setScale(c);
       },
     });
   }
@@ -163,16 +164,14 @@ export class GameView {
         this.setPosition(AnimationUtils.lerp(startX, endX, c), AnimationUtils.lerp(startY, endY, c));
       },
     });
+  }
 
-    /* AnimationUtils.start({
-      start: this.scale,
-      finish: 1,
-      duration: 250,
-      easing: AnimationUtils.easings.easeInCubic,
-      callback: c => {
-        this.scale = c;
-      },
-    });*/
+  setScale(scale: number) {
+    const center = this.center;
+    this.scale = scale;
+    console.log(center.x);
+    this.x = center.x - this.viewWidth / 2;
+    this.y = center.y - this.viewHeight / 2;
   }
 
   transformPoint(p: number) {

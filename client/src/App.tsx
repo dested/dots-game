@@ -1,4 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
+import {AnimationUtils} from '../../common/src/utils/animationUtils';
 import './App.css';
 import {ClientGame} from './game/clientGame';
 
@@ -75,7 +76,15 @@ const App: React.FC<{width: number; height: number}> = props => {
       <div style={{position: 'absolute', bottom: 50, right: 50}}>
         <button
           onClick={() => {
-            client.current!.view.scale += 0.2;
+            AnimationUtils.start({
+              start: client.current!.view.scale,
+              finish: 1,
+              duration: 500,
+              easing: AnimationUtils.easings.linear,
+              callback: c => {
+                client.current!.view.setScale(c);
+              },
+            });
           }}
         >
           +
@@ -83,7 +92,15 @@ const App: React.FC<{width: number; height: number}> = props => {
 
         <button
           onClick={() => {
-            client.current!.view.scale -= 0.2;
+            AnimationUtils.start({
+              start: client.current!.view.scale,
+              finish: 0.15,
+              duration: 500,
+              easing: AnimationUtils.easings.linear,
+              callback: c => {
+                client.current!.view.setScale(c);
+              },
+            });
           }}
         >
           -

@@ -33,8 +33,8 @@ export class ServerGame {
   }
 
   init() {
-    this.gameHeight = this.gameWidth = 5000;
-    for (let i = 0; i < 100; i++) {
+    this.gameHeight = this.gameWidth = 15000;
+    for (let i = 0; i < 300; i++) {
       const {x, y} = this.getSafePosition();
       this.addNewDeadEmitter(x, y, 2);
     }

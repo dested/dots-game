@@ -10,7 +10,7 @@
  - [ ]   add name to join
  - [ ] add leaderboard
  - [ ]   add mongo?
- - [ ] add zoom
+ - [x] add zoom
  - [x] select planet on tap
  - [x] compensate for resync when a device hasnt been active for minute
  - [x] send duration to client
