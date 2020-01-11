@@ -5,6 +5,7 @@ import {ColorUtils} from '../../../common/src/utils/colorUtils';
 import {MathUtils} from '../../../common/src/utils/mathUtils';
 import {CanvasUtils} from '../utils/canvasUtils';
 import {ClientGame} from './clientGame';
+import {ClientGameUI} from './clientGameUI';
 
 export class ClientDotSwarm extends BaseDotSwarm {
   dots: {

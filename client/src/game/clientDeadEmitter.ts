@@ -4,6 +4,7 @@ import {ColorUtils} from '../../../common/src/utils/colorUtils';
 import {CanvasUtils} from '../utils/canvasUtils';
 import {ClientEmitter} from './clientEmitter';
 import {ClientGame} from './clientGame';
+import {ClientGameUI} from './clientGameUI';
 
 export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter {
   life: number = GameConstants.deadEmitterStartingLife;

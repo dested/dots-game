@@ -1,17 +1,17 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {AnimationUtils} from '../../common/src/utils/animationUtils';
 import './App.css';
-import {ClientGame} from './game/clientGame';
+import {ClientGameUI} from './game/clientGameUI';
 
 const App: React.FC<{width: number; height: number}> = props => {
-  const client = useRef<ClientGame>(null);
+  const client = useRef<ClientGameUI>(null);
   const [died, setDied] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
   useEffect(() => {
     connect();
   }, []);
   function connect() {
-    (client as React.MutableRefObject<ClientGame>).current = new ClientGame({
+    (client as React.MutableRefObject<ClientGameUI>).current = new ClientGameUI({
       onDied: () => {
         setDied(true);
       },
