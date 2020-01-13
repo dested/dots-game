@@ -1,0 +1,87 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Cloudformation template for the analytics streams'
+
+Parameters:
+  Stage:
+    Type: String
+    Description: The development stage
+    Default: test
+  ProjectName:
+    Type: String
+    Description: Name of the project
+    Default: dots-game
+  AWSAccountId:
+    Type: String
+    Description: Account ID to grant assume role permissions
+    Default: ""
+
+Conditions:
+  EmptyAWSAccount: !Equals [!Ref AWSAccountId, ""]
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Deployment configuration parameters
+      Parameters:
+      - Stage
+
+Resources:
+  DotsAnalyticsStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name:
+        Fn::Sub:
+          - ${Stage}-${ProjectName}-${AWS::Region}-stream
+          - Stage: !Ref Stage
+            ProjectName: !Ref ProjectName
+      ShardCount: 1
+
+  DotsAnalyticsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub:
+          - ${ProjectName}${Stage}StreamWriteRole
+          - Stage: !Ref Stage
+            ProjectName: !Ref ProjectName
+      Description: A role to allow Kinesis access
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - elasticbeanstalk.amazonaws.com
+                - ec2.amazonaws.com
+              AWS:
+                !If
+                  - EmptyAWSAccount
+                  - !Ref AWS::NoValue
+                  - !Ref AWSAccountId
+            Action:
+              - 'sts:AssumeRole'
+
+  DotsAnalyticsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName:
+        Fn::Sub:
+          - ${ProjectName}${Stage}StreamWritePolicy
+          - Stage: !Ref Stage
+            ProjectName: !Ref ProjectName
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: ["kinesis:PutRecord" ,"kinesis:PutRecords"]
+            Resource: !GetAtt DotsAnalyticsStream.Arn
+      Roles:
+        - !Ref DotsAnalyticsRole
+
+Outputs:
+  DotsAnalyticsStreamName:
+    Value: !GetAtt DotsAnalyticsStream.Arn
