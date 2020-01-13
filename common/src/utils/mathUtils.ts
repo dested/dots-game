@@ -53,6 +53,13 @@ export class MathUtils {
     return Math.sqrt(a * a + b * b);
   }
 
+  static distanceObj(a: {x: number; y: number}, b: {x: number; y: number}) {
+    const aa = a.x - b.x;
+    const bb = a.y - b.y;
+
+    return Math.sqrt(aa * aa + bb * bb);
+  }
+
   static sum(numbers: number[]) {
     let sum = 0;
     for (const n of numbers) {

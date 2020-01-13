@@ -34,7 +34,7 @@ export class ServerGame {
 
   init() {
     this.gameHeight = this.gameWidth = 25000;
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 600; i++) {
       const {x, y} = this.getSafePosition();
       this.addNewDeadEmitter(x, y, 2);
     }
@@ -45,8 +45,12 @@ export class ServerGame {
       try {
         const now = +new Date();
         const duration = now - time;
-        console.log(duration);
+        if (duration > 250) {
+          console.log(duration);
+        }
+        console.time('server tick');
         this.serverTick(++serverTick, duration);
+        console.timeEnd('server tick');
         time = +new Date();
       } catch (ex) {
         console.error(ex);

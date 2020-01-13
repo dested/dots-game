@@ -5,5 +5,6 @@ export class GameConstants {
   static deadEmitterStartingDuration = 1000;
   static deadEmitterStartingLife = 100;
   static debug = true;
+  static debugDraw = true;
   static binaryTransport = true;
 }

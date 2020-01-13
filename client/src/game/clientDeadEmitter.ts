@@ -31,7 +31,7 @@ export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter 
     );
     context.stroke();
     context.fill();
-    if (GameConstants.debug) {
+    if (GameConstants.debugDraw) {
       context.font = '30px bold';
       context.fillStyle = 'red';
       context.fillText(this.life.toString(), this.x, this.y);

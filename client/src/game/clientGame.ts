@@ -33,6 +33,7 @@ export class ClientGame {
       } else {
         if (paused > 3) {
           paused = 0;
+          console.log('resync');
           this.sendMessageToServer({
             type: 'resync',
           });
@@ -54,6 +55,15 @@ export class ClientGame {
       onMessage: messages => {
         this.processMessages(messages);
       },
+    });
+  }
+
+  sendMove(x: number, y: number, swarms: {swarmId: number; percent: number}[]) {
+    this.sendMessageToServer({
+      type: 'move-dots',
+      x,
+      y,
+      swarms,
     });
   }
 

@@ -136,11 +136,10 @@ export class ClientGameUI extends ClientGame {
       }
 
       if (selected) {
-        this.sendMessageToServer({
-          type: 'move-dots',
+        this.sendMove(
           x,
           y,
-          swarms: this.swarms
+          this.swarms
             .filter(a => a.dots.some(d => d.selected))
             .map(swarm => {
               const selectedDots = MathUtils.sumC(swarm.dots, a => (a.selected ? 1 : 0));
@@ -150,8 +149,8 @@ export class ClientGameUI extends ClientGame {
                 swarmId: swarm.swarmId,
                 percent,
               };
-            }),
-        });
+            })
+        );
       }
       for (const swarm of this.swarms) {
         for (const dot of swarm.dots) {

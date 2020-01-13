@@ -115,6 +115,17 @@ export class ClientDotSwarm extends BaseDotSwarm {
   }
 
   draw(context: CanvasRenderingContext2D, dragRect?: {x: number; y: number; width: number; height: number}) {
+    const color = this.game.teams.find(t => t.teamId === this.teamId)!.color;
+
+    if ((this.game as ClientGameUI).view.scale < 0.5) {
+      context.save();
+      context.fillStyle = color;
+      CanvasUtils.circle(context, this.x, this.y, this.dotCount / 3);
+      context.fill();
+      context.restore();
+      return;
+    }
+
     if (false && !this.ownerEmitterId) {
       context.save();
       context.fillStyle = 'rgba(160,109,175,0.7)';
@@ -134,13 +145,13 @@ export class ClientDotSwarm extends BaseDotSwarm {
       ) {
         context.fillStyle = 'white';
       } else {
-        context.fillStyle = this.game.teams.find(t => t.teamId === this.teamId)!.color + 'aa';
+        context.fillStyle = color + 'aa';
       }
       CanvasUtils.circle(context, dot.x, dot.y, 1 + dot.value);
       context.fill();
       context.restore();
     }
-    if (GameConstants.debug) {
+    if (GameConstants.debugDraw) {
       context.font = '30px bold';
       context.fillStyle = 'yellow';
       context.fillText(this.dotCount.toString(), 0, 0);
