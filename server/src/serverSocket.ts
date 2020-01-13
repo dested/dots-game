@@ -1,4 +1,4 @@
-import * as WebServer from 'ws';
+import * as WebSocket from 'ws';
 import {GameConstants} from '../../common/src/game/gameConstants';
 import {ClientToServerMessage, ServerToClientMessage} from '../../common/src/models/messages';
 import {ClientToServerMessageParser} from '../../common/src/parsers/clientToServerMessageParser';
@@ -6,8 +6,8 @@ import {ServerToClientMessageParser} from '../../common/src/parsers/serverToClie
 import {uuid} from '../../common/src/utils/uuid';
 
 export class ServerSocket {
-  wss?: WebServer.Server;
-  connections: {connectionId: string; socket: WebServer.WebSocket}[] = [];
+  wss?: WebSocket.Server;
+  connections: {connectionId: string; socket: WebSocket}[] = [];
 
   start(
     onJoin: (connectionId: string) => void,
@@ -15,7 +15,7 @@ export class ServerSocket {
     onMessage: (connectionId: string, message: ClientToServerMessage) => void
   ) {
     const port = parseInt(process.env.PORT || '8081');
-    this.wss = new WebServer.Server({port});
+    this.wss = new WebSocket.Server({port});
     this.wss.on('error', (a: any, b: any) => {
       console.error('error', a, b);
     });

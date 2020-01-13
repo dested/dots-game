@@ -12,6 +12,8 @@ import {ServerDotSwarm} from './serverDotSwarm';
 import {ServerEmitter} from './serverEmitter';
 import {switchServerEmitter} from './utils';
 
+import startWithKinesis from '../kinesis';
+
 export class ServerGame {
   emitters: ServerEmitter[] = [];
   swarms: ServerDotSwarm[] = [];
@@ -21,15 +23,15 @@ export class ServerGame {
   teams: {connectionId: string; teamId: string; color: string}[] = [];
 
   constructor(private serverSocket: ServerSocket) {
-    serverSocket.start(
-      connectionId => {},
-      connectionId => {
+    startWithKinesis(serverSocket, {
+      onJoin: connectionId => {},
+      onLeave: connectionId => {
         this.clientLeave(connectionId);
       },
-      (connectionId, message) => {
+      onMessage: (connectionId, message) => {
         this.processMessage(connectionId, message);
-      }
-    );
+      },
+    });
   }
 
   init() {

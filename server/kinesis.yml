@@ -85,3 +85,5 @@ Resources:
 Outputs:
   DotsAnalyticsStreamName:
     Value: !GetAtt DotsAnalyticsStream.Arn
+  DotsAnalyticsRoleArn:
+    Value: !GetAtt DotsAnalyticsRole.Arn
