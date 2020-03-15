@@ -15,7 +15,7 @@ export class ServerSocket {
     onMessage: (connectionId: string, message: ClientToServerMessage) => void
   ) {
     const port = parseInt(process.env.PORT || '8081');
-    this.wss = new WebServer.Server({port});
+    this.wss = new WebServer.Server({port, perMessageDeflate: false});
     this.wss.on('error', (a: any, b: any) => {
       console.error('error', a, b);
     });
@@ -23,7 +23,7 @@ export class ServerSocket {
     this.wss.on('connection', ws => {
       ws.binaryType = 'arraybuffer';
       const me = {socket: ws, connectionId: uuid()};
-      console.log('new connection', me.connectionId);
+      // console.log('new connection', me.connectionId);
       this.connections.push(me);
 
       ws.on('message', message => {

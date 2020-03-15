@@ -47,7 +47,8 @@ export class ServerGame {
 
     let serverTick = 0;
     let time = +new Date();
-    setInterval(() => {
+    let tickTime = 0;
+    const processTick = () => {
       try {
         const now = +new Date();
         const duration = now - time;
@@ -56,11 +57,22 @@ export class ServerGame {
         }
         time = +new Date();
         // console.time('server tick');
-        this.serverTick(++serverTick, duration);
+        const newTickTime = +new Date();
+        this.serverTick(++serverTick, duration, tickTime);
+        tickTime = +new Date() - newTickTime;
         // console.timeEnd('server tick');
+        // console.time('gc');
+        // global.gc();
+        // console.timeEnd('gc');
+        setTimeout(() => {
+          processTick();
+        }, Math.max(Math.min(200, 200 - tickTime), 1));
       } catch (ex) {
         console.error(ex);
       }
+    };
+    setTimeout(() => {
+      processTick();
     }, 1000 / 5);
   }
 
@@ -125,15 +137,15 @@ export class ServerGame {
     return true;
   }
 
-  serverTick(tickIndex: number, duration: number) {
+  serverTick(tickIndex: number, duration: number, tickTime: number) {
     console.log(
-      `tick:${tickIndex}, Teams: ${this.teams.length}, Messages:${this.queuedMessages.length}, Swarms: ${this.swarms.length}, Emitters: ${this.emitters.length}, In: ${this.serverSocket.totalBytesReceived}, Out: ${this.serverSocket.totalBytesSent}`
+      `tick:${tickIndex}, Teams: ${this.teams.length}, Messages:${this.queuedMessages.length}, Swarms: ${this.swarms.length}, Emitters: ${this.emitters.length}, In: ${this.serverSocket.totalBytesReceived}, Out: ${this.serverSocket.totalBytesSent}, Duration: ${tickTime}`
     );
 
     const time = +new Date();
     let stopped = false;
     for (let i = 0; i < this.queuedMessages.length; i++) {
-      if (time + 50 < +new Date()) {
+      if (time + 500 < +new Date()) {
         console.log('stopped');
         stopped = true;
         this.queuedMessages.splice(0, i);
