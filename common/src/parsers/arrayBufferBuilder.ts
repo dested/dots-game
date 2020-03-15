@@ -1,47 +1,66 @@
 import {Utils} from '../utils/utils';
 
 export class ArrayBufferBuilder {
-  private array: {value: number; float: boolean; unsigned?: boolean; size: 8 | 16 | 32 | 64}[] = [];
+  buffer = new ArrayBuffer(50000);
+  view = new DataView(this.buffer);
+  curPosition = 0;
+
+  testSize(added: number) {
+    if (this.buffer.byteLength < this.curPosition + added) {
+      // console.log('resized', this.buffer.byteLength);
+      this.buffer = transfer(this.buffer, this.buffer.byteLength * 4);
+      this.view = new DataView(this.buffer);
+    }
+  }
 
   addFloat32(value: number) {
-    this.array.push({
-      value,
-      float: true,
-      size: 32,
-    });
+    this.testSize(4);
+    this.view.setFloat32(this.curPosition, value);
+    this.curPosition += 4;
   }
 
   addFloat64(value: number) {
-    this.array.push({
-      value,
-      float: true,
-      size: 64,
-    });
+    this.testSize(8);
+    this.view.setFloat64(this.curPosition, value);
+    this.curPosition += 8;
   }
 
   addInt8(value: number) {
-    this.array.push({
-      value,
-      float: false,
-      size: 8,
-    });
+    this.testSize(1);
+    this.view.setInt8(this.curPosition, value);
+    this.curPosition += 1;
   }
 
   addInt16(value: number) {
-    this.array.push({
-      value,
-      float: false,
-      size: 16,
-    });
+    this.testSize(2);
+    this.view.setInt16(this.curPosition, value);
+    this.curPosition += 2;
   }
 
   addInt32(value: number) {
-    this.array.push({
-      value,
-      float: false,
-      size: 32,
-    });
+    this.testSize(4);
+    this.view.setInt32(this.curPosition, value);
+    this.curPosition += 4;
   }
+
+  addUint8(value: number) {
+    this.testSize(1);
+    this.view.setUint8(this.curPosition, value);
+    this.curPosition += 1;
+  }
+
+  addUint16(value: number) {
+    this.testSize(2);
+    this.view.setUint16(this.curPosition, value);
+    this.curPosition += 2;
+  }
+
+  addUint32(value: number) {
+    this.testSize(4);
+    this.view.setUint32(this.curPosition, value);
+    this.curPosition += 4;
+  }
+
   addOptionalInt32(value?: number) {
     if (value === undefined) {
       this.addInt32(-1);
@@ -50,85 +69,9 @@ export class ArrayBufferBuilder {
     }
   }
 
-  addUint8(value: number) {
-    this.array.push({
-      value,
-      float: false,
-      unsigned: true,
-      size: 8,
-    });
-  }
-
-  addUint16(value: number) {
-    this.array.push({
-      value,
-      float: false,
-      unsigned: true,
-      size: 16,
-    });
-  }
-
-  addUint32(value: number) {
-    this.array.push({
-      value,
-      float: false,
-      unsigned: true,
-      size: 32,
-    });
-  }
-
   buildBuffer(): ArrayBuffer {
-    const size = Utils.sum(this.array, a => a.size / 8);
-    const buffer = new ArrayBuffer(size);
-    const view = new DataView(buffer);
-    let curPosition = 0;
-    for (const ele of this.array) {
-      if (ele.float) {
-        switch (ele.size) {
-          case 32:
-            view.setFloat32(curPosition, ele.value);
-            curPosition += 4;
-            break;
-          case 64:
-            view.setFloat64(curPosition, ele.value);
-            curPosition += 8;
-            break;
-        }
-      } else {
-        if (ele.unsigned) {
-          switch (ele.size) {
-            case 8:
-              view.setUint8(curPosition, ele.value);
-              curPosition += 1;
-              break;
-            case 16:
-              view.setUint16(curPosition, ele.value);
-              curPosition += 2;
-              break;
-            case 32:
-              view.setUint32(curPosition, ele.value);
-              curPosition += 4;
-              break;
-          }
-        } else {
-          switch (ele.size) {
-            case 8:
-              view.setInt8(curPosition, ele.value);
-              curPosition += 1;
-              break;
-            case 16:
-              view.setInt16(curPosition, ele.value);
-              curPosition += 2;
-              break;
-            case 32:
-              view.setInt32(curPosition, ele.value);
-              curPosition += 4;
-              break;
-          }
-        }
-      }
-    }
-    return buffer;
+    // console.log('buffer', this.curPosition);
+    return this.buffer.slice(0, this.curPosition);
   }
 
   addString(str: string) {
@@ -228,3 +171,18 @@ export class ArrayBufferReader {
     return strs.join('');
   }
 }
+
+const transfer =
+  (ArrayBuffer as any).transfer ||
+  ((source: ArrayBuffer, length: number) => {
+    if (!(source instanceof ArrayBuffer)) {
+      throw new TypeError('Source must be an instance of ArrayBuffer');
+    }
+    if (length <= source.byteLength) {
+      return source.slice(0, length);
+    }
+    const sourceView = new Uint8Array(source);
+    const destView = new Uint8Array(new ArrayBuffer(length));
+    destView.set(sourceView);
+    return destView.buffer;
+  });
