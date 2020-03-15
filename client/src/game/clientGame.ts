@@ -33,7 +33,7 @@ export class ClientGame {
       } else {
         if (paused > 3) {
           paused = 0;
-          console.log('resync');
+          // console.log('resync');
           this.sendMessageToServer({
             type: 'resync',
           });
@@ -111,7 +111,7 @@ export class ClientGame {
           this.myTeamId = message.yourTeamId;
           break;
         case 'game-data':
-          console.log('got gamedata');
+          // console.log('got gamedata');
           this.fillGameData(message);
           break;
         case 'new-emitter':

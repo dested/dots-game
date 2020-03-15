@@ -8,5 +8,5 @@ export class GameConstants {
   static debugDraw = true;
   static binaryTransport = true;
   static depleterRatio = 0.02;
-  static maxSwarmRadius=80;
+  static maxSwarmRadius = 80;
 }

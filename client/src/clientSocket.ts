@@ -2,6 +2,7 @@ import {GameConstants} from '../../common/src/game/gameConstants';
 import {ClientToServerMessage, ServerToClientMessage} from '../../common/src/models/messages';
 import {ClientToServerMessageParser} from '../../common/src/parsers/clientToServerMessageParser';
 import {ServerToClientMessageParser} from '../../common/src/parsers/serverToClientMessageParser';
+import {Utils} from '../../common/src/utils/utils';
 
 export class ClientSocket {
   private socket?: WebSocket;
@@ -37,10 +38,14 @@ export class ClientSocket {
     if (!this.socket) {
       throw new Error('Not connected');
     }
-    if (GameConstants.binaryTransport) {
-      this.socket.send(ClientToServerMessageParser.fromClientToServerMessage(message));
-    } else {
-      this.socket.send(JSON.stringify(message));
+    try {
+      if (GameConstants.binaryTransport) {
+        this.socket.send(ClientToServerMessageParser.fromClientToServerMessage(message));
+      } else {
+        this.socket.send(JSON.stringify(message));
+      }
+    } catch (ex) {
+      console.error('disconnected??');
     }
   }
 }

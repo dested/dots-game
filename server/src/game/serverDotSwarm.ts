@@ -65,24 +65,16 @@ export class ServerDotSwarm extends BaseDotSwarm {
         this.game.tryMergeSwarm(this.swarmId);
       }
       if (this.game.swarms.indexOf(this) !== -1) {
-        this.game.swarmBush.insert(
-          (this.bushNode = {
-            minX: this.x - GameConstants.maxSwarmRadius,
-            minY: this.y - GameConstants.maxSwarmRadius,
-            maxX: this.x + GameConstants.maxSwarmRadius,
-            maxY: this.y + GameConstants.maxSwarmRadius,
-            item: this,
-          })
-        );
+        this.bushNode.minX = this.x - GameConstants.maxSwarmRadius;
+        this.bushNode.minY = this.y - GameConstants.maxSwarmRadius;
+        this.bushNode.maxX = this.x + GameConstants.maxSwarmRadius;
+        this.bushNode.maxY = this.y + GameConstants.maxSwarmRadius;
+
+        this.game.swarmBush.insert(this.bushNode);
       }
     }
 
-    const foundSwarms = this.game.swarmBush.search({
-      minX: this.x - GameConstants.maxSwarmRadius,
-      minY: this.y - GameConstants.maxSwarmRadius,
-      maxX: this.x + GameConstants.maxSwarmRadius,
-      maxY: this.y + GameConstants.maxSwarmRadius,
-    });
+    const foundSwarms = this.game.swarmBush.search(this.bushNode);
 
     for (const {item: swarm} of foundSwarms) {
       if (swarm.teamId !== this.teamId) {
@@ -110,15 +102,10 @@ export class ServerDotSwarm extends BaseDotSwarm {
     }
 
     if (!this.move) {
-      const foundEmitters = this.game.emitterBush.search({
-        minX: this.x - GameConstants.maxSwarmRadius,
-        minY: this.y - GameConstants.maxSwarmRadius,
-        maxX: this.x + GameConstants.maxSwarmRadius,
-        maxY: this.y + GameConstants.maxSwarmRadius,
-      });
+      const foundEmitters = this.game.emitterBush.search(this.bushNode);
 
       for (let i = foundEmitters.length - 1; i >= 0; i--) {
-        const {item: emitter} = foundEmitters[i];
+        const emitter = foundEmitters[i].item;
         if (!(emitter instanceof ServerDeadEmitter)) {
           continue;
         }
