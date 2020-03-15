@@ -5,6 +5,7 @@ import {MathUtils} from '../../../common/src/utils/mathUtils';
 import {unreachable} from '../../../common/src/utils/unreachable';
 import {Utils} from '../../../common/src/utils/utils';
 import {nextId, uuid} from '../../../common/src/utils/uuid';
+import {RBush} from '../rbush';
 import {ServerSocket} from '../serverSocket';
 import {ServerDeadEmitter} from './serverDeadEmitter';
 import {ServerDotEmitter} from './serverDotEmitter';
@@ -19,8 +20,13 @@ export class ServerGame {
   gameHeight: number = 0;
 
   teams: {connectionId: string; teamId: string; color: string}[] = [];
+  swarmBush: RBush<ServerDotSwarm>;
+  emitterBush: RBush<ServerEmitter>;
 
   constructor(private serverSocket: ServerSocket) {
+    this.swarmBush = new RBush();
+    this.emitterBush = new RBush();
+
     serverSocket.start(
       connectionId => {},
       connectionId => {
@@ -45,13 +51,13 @@ export class ServerGame {
       try {
         const now = +new Date();
         const duration = now - time;
-        if (duration > 250) {
+        if (duration > 220) {
           console.log(duration);
         }
-        console.time('server tick');
-        this.serverTick(++serverTick, duration);
-        console.timeEnd('server tick');
         time = +new Date();
+        // console.time('server tick');
+        this.serverTick(++serverTick, duration);
+        // console.timeEnd('server tick');
       } catch (ex) {
         console.error(ex);
       }
@@ -120,8 +126,20 @@ export class ServerGame {
   }
 
   serverTick(tickIndex: number, duration: number) {
-    // console.log('tick', tickIndex, this.teams.length, this.queuedMessages.length);
-    for (const q of this.queuedMessages) {
+    console.log(
+      `tick:${tickIndex}, Teams: ${this.teams.length}, Messages:${this.queuedMessages.length}, Swarms: ${this.swarms.length}, Emitters: ${this.emitters.length}, In: ${this.serverSocket.totalBytesReceived}, Out: ${this.serverSocket.totalBytesSent}`
+    );
+
+    const time = +new Date();
+    let stopped = false;
+    for (let i = 0; i < this.queuedMessages.length; i++) {
+      if (time + 50 < +new Date()) {
+        console.log('stopped');
+        stopped = true;
+        this.queuedMessages.splice(0, i);
+        break;
+      }
+      const q = this.queuedMessages[i];
       switch (q.message.type) {
         case 'join':
           this.clientJoin(q.connectionId);
@@ -140,19 +158,21 @@ export class ServerGame {
           unreachable(q.message);
       }
     }
-    this.queuedMessages.length = 0;
+    if (!stopped) {
+      this.queuedMessages.length = 0;
+    } else {
+      console.log(this.queuedMessages.length, 'remaining');
+    }
 
     for (let i = this.emitters.length - 1; i >= 0; i--) {
       const emitter = this.emitters[i];
-      emitter.serverTick();
+      emitter.serverTick(tickIndex);
     }
 
     for (const swarm of this.swarms) {
       if (tickIndex % 5 === 0 && swarm.battledThisTick.length === 0) {
         if (!swarm.ownerEmitterId) {
-          swarm.augmentDotCount(
-            -Math.max(swarm.depleter + Math.floor(swarm.dotCount / 300) + (swarm.move ? -1 : 1), 0)
-          );
+          swarm.augmentDotCount(-Math.round(swarm.dotCount * GameConstants.depleterRatio));
         }
       }
       swarm.battledThisTick.length = 0;
@@ -328,6 +348,7 @@ export class ServerGame {
       // debugger;
       throw new Error('Bunko');
     }
+    emitter.remove();
     this.emitters.splice(this.emitters.indexOf(emitter), 1);
     this.sendMessageToClients({
       type: 'kill-emitter',
@@ -341,6 +362,7 @@ export class ServerGame {
     if (emitterIndex === -1) {
       throw new Error('Bunko remove emitter');
     }
+    this.emitters[emitterIndex].remove();
     this.emitters.splice(emitterIndex, 1);
     this.sendMessageToClients({
       type: 'remove-emitter',

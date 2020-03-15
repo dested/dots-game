@@ -15,7 +15,7 @@ export class BaseDotSwarm {
   ) {}
 
   get radius(): number {
-    return Math.min((this.ownerEmitterId ? GameConstants.emitterRadius : 20) + this.dotCount / 5, 80);
+    return Math.min((this.ownerEmitterId ? GameConstants.emitterRadius : 20) + this.dotCount / 5, GameConstants.maxSwarmRadius);
   }
 
   randomPosition() {

@@ -28,6 +28,7 @@ export class ServerSocket {
 
       ws.on('message', message => {
         if (GameConstants.binaryTransport) {
+          this.totalBytesReceived += (message as ArrayBuffer).byteLength;
           onMessage(me.connectionId, ClientToServerMessageParser.toClientToServerMessage(message as ArrayBuffer));
         } else {
           onMessage(me.connectionId, JSON.parse(message as string));
@@ -60,7 +61,7 @@ export class ServerSocket {
       this.totalBytesSent += body.length * 2 + 1;
       client.socket.send(body);
     }
-    // console.log(this.totalBytesSent);
   }
   totalBytesSent = 0;
+  totalBytesReceived = 0;
 }

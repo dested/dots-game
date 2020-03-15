@@ -229,9 +229,6 @@ export class ClientGameUI extends ClientGame {
     context.fillStyle = 'white';
     context.scale(this.view.scale, this.view.scale);
     context.translate(-box.x, -box.y);
-    context.lineWidth = 6;
-    context.strokeStyle = 'red';
-    context.strokeRect(box.x, box.y, box.width, box.height);
 
     const dragRect = this.dragRect();
 

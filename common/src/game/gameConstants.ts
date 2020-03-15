@@ -7,4 +7,6 @@ export class GameConstants {
   static debug = true;
   static debugDraw = true;
   static binaryTransport = true;
+  static depleterRatio = 0.02;
+  static maxSwarmRadius=80;
 }

@@ -63,7 +63,7 @@ export class BotClientGame extends ClientGame {
         }
         if (aroundMe.length > 0) {
           const closest = aroundMe.sort((a, b) => a.distance - b.distance)[0];
-          console.log('sending to dead emitter from emitter');
+          // console.log('sending to dead emitter from emitter');
           this.sendMove(closest.emitter.x, closest.emitter.y, [
             {swarmId: myEmitterSwarm.swarmId, percent: (closest.emitter.life * 2) / myEmitterSwarm.dotCount},
           ]);
@@ -79,7 +79,7 @@ export class BotClientGame extends ClientGame {
         for (const enemySwarm of enemySwarms) {
           if (MathUtils.overlapCircles(myRovingSwarm, enemySwarm, GameConstants.emitterRadius * 6)) {
             if (myRovingSwarm.dotCount > enemySwarm.dotCount * 1.2) {
-              console.log('sending to enemy swarm');
+              // console.log('sending to enemy swarm');
               this.sendMove(enemySwarm.x, enemySwarm.y, [{swarmId: myRovingSwarm.swarmId, percent: 1}]);
               continue swarm;
             }
@@ -89,7 +89,7 @@ export class BotClientGame extends ClientGame {
           if (MathUtils.overlapCircles(myRovingSwarm, enemyEmitter, GameConstants.emitterRadius * 6)) {
             const enemyEmitterSwarm = this.swarms.find(a => a.ownerEmitterId === enemyEmitter.emitterId);
             if (myRovingSwarm.dotCount > enemyEmitterSwarm.dotCount * 1.2) {
-              console.log('sending to enemy emitter');
+              // console.log('sending to enemy emitter');
               this.sendMove(enemyEmitter.x, enemyEmitter.y, [{swarmId: myRovingSwarm.swarmId, percent: 1}]);
               continue swarm;
             }
@@ -108,7 +108,7 @@ export class BotClientGame extends ClientGame {
         }
         if (aroundMe.length > 0) {
           const closest = aroundMe.sort((a, b) => a.distance - b.distance)[0];
-          console.log('sending to swarm to dead emitter');
+          // console.log('sending to swarm to dead emitter');
           this.sendMove(closest.emitter.x, closest.emitter.y, [
             {swarmId: myRovingSwarm.swarmId, percent: (closest.emitter.life * 2) / myRovingSwarm.dotCount},
           ]);

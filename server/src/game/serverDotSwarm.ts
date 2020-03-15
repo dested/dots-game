@@ -1,10 +1,12 @@
 import {BaseDotSwarm} from '../../../common/src/game/baseDotSwarm';
 import {GameConstants} from '../../../common/src/game/gameConstants';
 import {MathUtils} from '../../../common/src/utils/mathUtils';
+import {RNode} from '../rbush';
 import {ServerDeadEmitter} from './serverDeadEmitter';
 import {ServerGame} from './serverGame';
 
 export class ServerDotSwarm extends BaseDotSwarm {
+  private bushNode: RNode<ServerDotSwarm>;
   constructor(
     public game: ServerGame,
     swarmId: number,
@@ -14,9 +16,16 @@ export class ServerDotSwarm extends BaseDotSwarm {
     teamId: string
   ) {
     super(swarmId, x, y, ownerEmitterId, teamId);
+    this.bushNode = {
+      minX: x - GameConstants.maxSwarmRadius,
+      minY: y - GameConstants.maxSwarmRadius,
+      maxX: x + GameConstants.maxSwarmRadius,
+      maxY: y + GameConstants.maxSwarmRadius,
+      item: this,
+    };
+    game.swarmBush.insert(this.bushNode);
   }
 
-  depleter: number = 1;
   battledThisTick: number[] = [];
 
   augmentDotCount(dotCount: number) {
@@ -47,23 +56,43 @@ export class ServerDotSwarm extends BaseDotSwarm {
       this.x = this.x + this.move.directionX * (this.move.speed * (duration / 1000));
       this.y = this.y + this.move.directionY * (this.move.speed * (duration / 1000));
 
+      this.game.swarmBush.remove(this.bushNode);
+
       if (MathUtils.distance(this.x, this.y, this.move.startingX, this.move.startingY) > this.move.distance) {
         this.x = this.move.headingX;
         this.y = this.move.headingY;
         this.move = undefined;
         this.game.tryMergeSwarm(this.swarmId);
       }
+      if (this.game.swarms.indexOf(this) !== -1) {
+        this.game.swarmBush.insert(
+          (this.bushNode = {
+            minX: this.x - GameConstants.maxSwarmRadius,
+            minY: this.y - GameConstants.maxSwarmRadius,
+            maxX: this.x + GameConstants.maxSwarmRadius,
+            maxY: this.y + GameConstants.maxSwarmRadius,
+            item: this,
+          })
+        );
+      }
     }
 
-    for (const swarm of this.game.swarms) {
-      if (this.dotCount <= 0 || swarm.dotCount <= 0) {
-        continue;
-      }
+    const foundSwarms = this.game.swarmBush.search({
+      minX: this.x - GameConstants.maxSwarmRadius,
+      minY: this.y - GameConstants.maxSwarmRadius,
+      maxX: this.x + GameConstants.maxSwarmRadius,
+      maxY: this.y + GameConstants.maxSwarmRadius,
+    });
+
+    for (const {item: swarm} of foundSwarms) {
       if (swarm.teamId !== this.teamId) {
         if (swarm.battledThisTick.includes(this.swarmId)) {
           continue;
         }
         if (MathUtils.overlapCircles(this, swarm)) {
+          if (swarm.dotCount <= 0) {
+            continue;
+          }
           const power = Math.min(
             Math.max(Math.ceil(this.dotCount / 9), Math.ceil(swarm.dotCount / 9)),
             swarm.dotCount,
@@ -73,13 +102,23 @@ export class ServerDotSwarm extends BaseDotSwarm {
           swarm.augmentDotCount(-power);
           swarm.battledThisTick.push(this.swarmId);
           this.battledThisTick.push(swarm.swarmId);
+          if (this.dotCount <= 0) {
+            break;
+          }
         }
       }
     }
 
     if (!this.move) {
-      for (let i = this.game.emitters.length - 1; i >= 0; i--) {
-        const emitter = this.game.emitters[i];
+      const foundEmitters = this.game.emitterBush.search({
+        minX: this.x - GameConstants.maxSwarmRadius,
+        minY: this.y - GameConstants.maxSwarmRadius,
+        maxX: this.x + GameConstants.maxSwarmRadius,
+        maxY: this.y + GameConstants.maxSwarmRadius,
+      });
+
+      for (let i = foundEmitters.length - 1; i >= 0; i--) {
+        const {item: emitter} = foundEmitters[i];
         if (!(emitter instanceof ServerDeadEmitter)) {
           continue;
         }

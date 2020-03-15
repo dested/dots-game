@@ -7,7 +7,7 @@ import {BotClientGame} from './botClientGame';
 console.log('started');
 
 async function main() {
-/*  const clientGame = new BotClientGame({
+  /*  const clientGame = new BotClientGame({
     onDisconnect: () => {},
     onDied: () => {},
   });
@@ -17,7 +17,7 @@ async function main() {
       onDisconnect: () => {},
       onDied: () => {},
     });
-    await Utils.timeout(140);
+    await Utils.timeout(100);
   }
 }
 
