@@ -5,7 +5,7 @@ import {ClientToServerMessageParser} from '../../common/src/parsers/clientToServ
 import {ServerToClientMessageParser} from '../../common/src/parsers/serverToClientMessageParser';
 import {uuid} from '../../common/src/utils/uuid';
 
-export class ServerSocket {
+export class ServerSocket implements IServerSocket {
   wss?: WebServer.Server;
   connections: {connectionId: string; socket: WebServer.WebSocket}[] = [];
 
@@ -64,4 +64,14 @@ export class ServerSocket {
   }
   totalBytesSent = 0;
   totalBytesReceived = 0;
+}
+
+export interface IServerSocket {
+  start(
+    onJoin: (connectionId: string) => void,
+    onLeave: (connectionId: string) => void,
+    onMessage: (connectionId: string, message: ClientToServerMessage) => void
+  ): void;
+
+  sendMessage(connectionId: string, messages: ServerToClientMessage[]): void;
 }

@@ -6,7 +6,7 @@ export class GameConstants {
   static deadEmitterStartingDuration = 1000;
   static deadEmitterStartingLife = 100;
   static debug = false;
-  static debugDraw = true;
+  static debugDraw = false;
   static binaryTransport = true;
   static depleterRatio = 0.007;
   static maxSwarmRadius = 80;

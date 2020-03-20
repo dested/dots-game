@@ -5,10 +5,14 @@ import {ClientEmitter} from '../../client/src/game/clientEmitter';
 import {ClientGame} from '../../client/src/game/clientGame';
 import {GameConstants} from '../../common/src/game/gameConstants';
 import {MathUtils} from '../../common/src/utils/mathUtils';
+import {IClientSocket} from '../../client/src/clientSocket';
 
 export class BotClientGame extends ClientGame {
-  constructor(options: {onDied: (me: ClientGame) => void; onDisconnect: (me: ClientGame) => void}) {
-    super(options);
+  constructor(
+    options: {onDied: (me: ClientGame) => void; onDisconnect: (me: ClientGame) => void},
+    socket: IClientSocket
+  ) {
+    super(options, socket);
 
     const int = setInterval(() => {
       if (this.isDead) {

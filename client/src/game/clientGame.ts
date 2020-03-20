@@ -4,7 +4,7 @@ import {ClientToServerMessage, ServerToClientMessage} from '../../../common/src/
 import {MathUtils} from '../../../common/src/utils/mathUtils';
 import {unreachable} from '../../../common/src/utils/unreachable';
 import {uuid} from '../../../common/src/utils/uuid';
-import {ClientSocket} from '../clientSocket';
+import {ClientSocket, IClientSocket} from '../clientSocket';
 import {CanvasUtils} from '../utils/canvasUtils';
 import {ClientDeadEmitter} from './clientDeadEmitter';
 import {ClientDotEmitter} from './clientDotEmitter';
@@ -18,12 +18,13 @@ export class ClientGame {
   myTeamId?: string;
   teams: {teamId: string; color: string}[] = [];
   connectionId: string;
-  protected socket: ClientSocket;
   protected isDead: boolean = false;
 
-  constructor(private options: {onDied: (me: ClientGame) => void; onDisconnect: (me: ClientGame) => void}) {
+  constructor(
+    private options: {onDied: (me: ClientGame) => void; onDisconnect: (me: ClientGame) => void},
+    private socket: IClientSocket
+  ) {
     this.connectionId = uuid();
-    this.socket = new ClientSocket();
     this.socket.connect({
       onOpen: () => {
         this.sendMessageToServer({type: 'join'});

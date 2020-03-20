@@ -4,7 +4,7 @@ import {ClientToServerMessage, ServerToClientMessage} from '../../../common/src/
 import {MathUtils} from '../../../common/src/utils/mathUtils';
 import {unreachable} from '../../../common/src/utils/unreachable';
 import {uuid} from '../../../common/src/utils/uuid';
-import {ClientSocket} from '../clientSocket';
+import {ClientSocket, IClientSocket} from '../clientSocket';
 import {CanvasUtils} from '../utils/canvasUtils';
 import {ClientDeadEmitter} from './clientDeadEmitter';
 import {ClientDotEmitter} from './clientDotEmitter';
@@ -20,8 +20,8 @@ export class ClientGameUI extends ClientGame {
   private currentDragging: {x: number; y: number} | null = null;
   view: GameView;
 
-  constructor(options: {onDied: () => void; onDisconnect: () => void}) {
-    super(options);
+  constructor(options: {onDied: () => void; onDisconnect: () => void}, socket: IClientSocket) {
+    super(options, socket);
     this.canvas = document.getElementById('game') as HTMLCanvasElement;
     this.context = this.canvas.getContext('2d')!;
     this.view = new GameView(this.canvas);

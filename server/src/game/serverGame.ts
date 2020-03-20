@@ -6,7 +6,7 @@ import {unreachable} from '../../../common/src/utils/unreachable';
 import {Utils} from '../../../common/src/utils/utils';
 import {nextId, uuid} from '../../../common/src/utils/uuid';
 import {RBush} from '../rbush';
-import {ServerSocket} from '../serverSocket';
+import {IServerSocket, ServerSocket} from '../serverSocket';
 import {ServerDeadEmitter} from './serverDeadEmitter';
 import {ServerDotEmitter} from './serverDotEmitter';
 import {ServerDotSwarm} from './serverDotSwarm';
@@ -23,7 +23,7 @@ export class ServerGame {
   swarmBush: RBush<ServerDotSwarm>;
   emitterBush: RBush<ServerEmitter>;
 
-  constructor(private serverSocket: ServerSocket) {
+  constructor(private serverSocket: IServerSocket) {
     this.swarmBush = new RBush();
     this.emitterBush = new RBush();
 
@@ -145,7 +145,7 @@ export class ServerGame {
 
   serverTick(tickIndex: number, duration: number, tickTime: number) {
     console.log(
-      `tick: ${tickIndex}, Teams: ${this.teams.length}, Messages:${this.queuedMessages.length}, Swarms: ${this.swarms.length}, Emitters: ${this.emitters.length}, In: ${this.serverSocket.totalBytesReceived}, Out: ${this.serverSocket.totalBytesSent}, Duration: ${tickTime}`
+      `tick: ${tickIndex}, Teams: ${this.teams.length}, Messages:${this.queuedMessages.length}, Swarms: ${this.swarms.length}, Emitters: ${this.emitters.length}, Duration: ${tickTime}`
     );
 
     const time = +new Date();

@@ -1,25 +1,57 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {AnimationUtils} from '../../common/src/utils/animationUtils';
+import {ServerGame} from '../../server/src/game/serverGame';
 import './App.css';
 import {ClientGameUI} from './game/clientGameUI';
+import {LocalClientSocket, LocalServerSocket} from './localServerMocking';
+import {BotClientGame} from '../../bot/src/botClientGame';
+import {ClientSocket} from './clientSocket';
+import {ClientGame} from './game/clientGame';
+import {Utils} from '../../common/src/utils/utils';
 
 const App: React.FC<{width: number; height: number}> = props => {
   const client = useRef<ClientGameUI>(null);
   const [died, setDied] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
   useEffect(() => {
-    connect();
+    const serverSocket = new LocalServerSocket();
+    const serverGame = new ServerGame(serverSocket);
+    serverGame.init();
+
+    setTimeout(async () => {
+      connect();
+
+      for (let i = 0; i < 50; i++) {
+        const options = {
+          onDisconnect: () => {
+            new BotClientGame(options, new LocalClientSocket());
+          },
+          onDied: (me: ClientGame) => {
+            me.disconnect();
+            new BotClientGame(options, new LocalClientSocket());
+          },
+        };
+
+        new BotClientGame(options, new LocalClientSocket());
+        await Utils.timeout(100);
+      }
+    }, 50);
   }, []);
+
   function connect() {
-    (client as React.MutableRefObject<ClientGameUI>).current = new ClientGameUI({
-      onDied: () => {
-        setDied(true);
+    (client as React.MutableRefObject<ClientGameUI>).current = new ClientGameUI(
+      {
+        onDied: () => {
+          setDied(true);
+        },
+        onDisconnect: () => {
+          setDisconnected(true);
+        },
       },
-      onDisconnect: () => {
-        setDisconnected(true);
-      },
-    });
+      new LocalClientSocket()
+    );
   }
+
   return (
     <div className="App">
       <canvas key={'canvas'} id={'game'} width={props.width} height={props.height} />

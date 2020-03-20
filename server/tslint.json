@@ -24,10 +24,6 @@
     "no-empty-interface": false,
     "max-classes-per-file": false,
     "no-unused-expression": false,
-    "interface-name": [
-      true,
-      "never-prefix"
-    ],
     "member-access": [
       true,
       "no-public"

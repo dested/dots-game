@@ -4,7 +4,7 @@ import {ClientToServerMessageParser} from '../../common/src/parsers/clientToServ
 import {ServerToClientMessageParser} from '../../common/src/parsers/serverToClientMessageParser';
 import {Utils} from '../../common/src/utils/utils';
 
-export class ClientSocket {
+export class ClientSocket implements IClientSocket {
   private socket?: WebSocket;
   connect(options: {
     onOpen: () => void;
@@ -52,4 +52,16 @@ export class ClientSocket {
   disconnect() {
     this.socket?.close();
   }
+}
+
+export interface IClientSocket {
+  connect(options: {
+    onOpen: () => void;
+    onMessage: (messages: ServerToClientMessage[]) => void;
+    onDisconnect: () => void;
+  }): void;
+
+  sendMessage(message: ClientToServerMessage): void;
+
+  disconnect(): void;
 }
