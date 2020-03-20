@@ -1,7 +1,6 @@
-console.log('started1');
 import {ServerGame} from './game/serverGame';
 import {ServerSocket} from './serverSocket';
-console.log('started2');
+console.log('started');
 const serverSocket = new ServerSocket();
 const serverGame = new ServerGame(serverSocket);
 serverGame.init();

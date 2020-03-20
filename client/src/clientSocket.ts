@@ -48,4 +48,8 @@ export class ClientSocket {
       console.error('disconnected??');
     }
   }
+
+  disconnect() {
+    this.socket?.close();
+  }
 }

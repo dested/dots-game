@@ -120,19 +120,12 @@ export class ClientDotSwarm extends BaseDotSwarm {
     if ((this.game as ClientGameUI).view.scale < 0.5) {
       context.save();
       context.fillStyle = color;
-      CanvasUtils.circle(context, this.x, this.y, this.dotCount / 3);
+      CanvasUtils.circle(context, this.x, this.y, this.radius);
       context.fill();
       context.restore();
       return;
     }
 
-    if (false && !this.ownerEmitterId) {
-      context.save();
-      context.fillStyle = 'rgba(160,109,175,0.7)';
-      CanvasUtils.circle(context, this.x, this.y, this.radius);
-      context.fill();
-      context.restore();
-    }
     context.save();
     context.translate(this.x, this.y);
     for (const dot of this.dots) {
@@ -147,7 +140,7 @@ export class ClientDotSwarm extends BaseDotSwarm {
       } else {
         context.fillStyle = color + 'aa';
       }
-      CanvasUtils.circle(context, dot.x, dot.y, 1 + dot.value);
+      CanvasUtils.circle(context, dot.x, dot.y, Math.min(1 + dot.value, 50));
       context.fill();
       context.restore();
     }

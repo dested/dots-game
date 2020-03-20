@@ -1,15 +1,20 @@
 import {ClientDeadEmitter} from '../../client/src/game/clientDeadEmitter';
 import {ClientDotEmitter} from '../../client/src/game/clientDotEmitter';
 import {ClientDotSwarm} from '../../client/src/game/clientDotSwarm';
+import {ClientEmitter} from '../../client/src/game/clientEmitter';
 import {ClientGame} from '../../client/src/game/clientGame';
 import {GameConstants} from '../../common/src/game/gameConstants';
 import {MathUtils} from '../../common/src/utils/mathUtils';
 
 export class BotClientGame extends ClientGame {
-  constructor(options: {onDied: () => void; onDisconnect: () => void}) {
+  constructor(options: {onDied: (me: ClientGame) => void; onDisconnect: (me: ClientGame) => void}) {
     super(options);
 
-    setInterval(() => {
+    const int = setInterval(() => {
+      if (this.isDead) {
+        clearInterval(int);
+        return;
+      }
       this.tryNextMoves();
     }, 1000);
   }
@@ -23,10 +28,15 @@ export class BotClientGame extends ClientGame {
     });
   }
 
+  private sentToEmitter: {[emitterId: number]: {emitterId: number; time: number}[]} = {};
+
   private tryNextMoves() {
     const myEmitters = this.emitters
       .filter(emitter => emitter instanceof ClientDotEmitter && emitter.teamId === this.myTeamId)
       .map(a => a as ClientDotEmitter);
+    if (myEmitters.length === 0) {
+      console.log('dead');
+    }
     const deadEmitters = this.emitters
       .filter(emitter => emitter instanceof ClientDeadEmitter)
       .map(a => a as ClientDeadEmitter);
@@ -42,6 +52,16 @@ export class BotClientGame extends ClientGame {
     let underAttack = false;
 
     emitters: for (const emitter of myEmitters) {
+      if (!this.sentToEmitter[emitter.emitterId]) {
+        this.sentToEmitter[emitter.emitterId] = [];
+      }
+      for (let i = this.sentToEmitter[emitter.emitterId].length - 1; i >= 0; i--) {
+        const sentToDeadEmitterElementElement = this.sentToEmitter[emitter.emitterId][i];
+        if (sentToDeadEmitterElementElement.time + 60 * 1000 < +new Date()) {
+          this.sentToEmitter[emitter.emitterId].splice(i, 1);
+        }
+      }
+
       const myEmitterSwarm = mySwarms.find(a => a.ownerEmitterId === emitter.emitterId);
       for (const enemySwarm of enemySwarms) {
         if (MathUtils.overlapCircles(emitter, enemySwarm, GameConstants.emitterRadius * 4)) {
@@ -51,12 +71,15 @@ export class BotClientGame extends ClientGame {
         }
       }
       if (!underAttack) {
-        const aroundMe: {emitter: ClientDeadEmitter; distance: number}[] = [];
+        const aroundMe: {emitter: ClientEmitter; distance: number}[] = [];
 
         for (const deadEmitter of deadEmitters) {
           if (myEmitterSwarm.dotCount > deadEmitter.life * 2) {
             const distance = MathUtils.distanceObj(emitter, deadEmitter);
             if (distance < GameConstants.emitterRadius * 50) {
+              if (this.sentToEmitter[emitter.emitterId].find(a => a.emitterId === deadEmitter.emitterId)) {
+                continue;
+              }
               aroundMe.push({emitter: deadEmitter, distance});
             }
           }
@@ -64,10 +87,40 @@ export class BotClientGame extends ClientGame {
         if (aroundMe.length > 0) {
           const closest = aroundMe.sort((a, b) => a.distance - b.distance)[0];
           // console.log('sending to dead emitter from emitter');
+          this.sentToEmitter[emitter.emitterId].push({
+            emitterId: closest.emitter.emitterId,
+            time: +new Date(),
+          });
           this.sendMove(closest.emitter.x, closest.emitter.y, [
-            {swarmId: myEmitterSwarm.swarmId, percent: (closest.emitter.life * 2) / myEmitterSwarm.dotCount},
+            {
+              swarmId: myEmitterSwarm.swarmId,
+              percent: ((closest.emitter as ClientDeadEmitter).life * 2) / myEmitterSwarm.dotCount,
+            },
           ]);
           continue emitters;
+        }
+
+        if (myEmitterSwarm.dotCount > 150) {
+          aroundMe.length = 0;
+          for (const enemyEmitter of enemyEmitters) {
+            const distance = MathUtils.distanceObj(emitter, enemyEmitter);
+            if (distance < GameConstants.emitterRadius * 50) {
+              if (this.sentToEmitter[emitter.emitterId].find(a => a.emitterId === enemyEmitter.emitterId)) {
+                continue;
+              }
+              aroundMe.push({emitter: enemyEmitter, distance});
+            }
+          }
+          if (aroundMe.length > 0) {
+            const closest = aroundMe.sort((a, b) => a.distance - b.distance)[0];
+            // console.log('sending to dead emitter from emitter');
+            this.sentToEmitter[emitter.emitterId].push({
+              emitterId: closest.emitter.emitterId,
+              time: +new Date(),
+            });
+            this.sendMove(closest.emitter.x, closest.emitter.y, [{swarmId: myEmitterSwarm.swarmId, percent: 0.8}]);
+            continue emitters;
+          }
         }
       } else {
         // todo fortify from other nearby bases
@@ -99,12 +152,12 @@ export class BotClientGame extends ClientGame {
         const aroundMe: {emitter: ClientDeadEmitter; distance: number}[] = [];
 
         for (const deadEmitter of deadEmitters) {
-          if (myRovingSwarm.dotCount > deadEmitter.life * 2) {
-            const distance = MathUtils.distanceObj(myRovingSwarm, deadEmitter);
-            if (distance < GameConstants.emitterRadius * 50) {
-              aroundMe.push({emitter: deadEmitter, distance});
-            }
+          // if (myRovingSwarm.dotCount > deadEmitter.life * 2) {
+          const distance = MathUtils.distanceObj(myRovingSwarm, deadEmitter);
+          if (distance < GameConstants.emitterRadius * 500) {
+            aroundMe.push({emitter: deadEmitter, distance});
           }
+          // }
         }
         if (aroundMe.length > 0) {
           const closest = aroundMe.sort((a, b) => a.distance - b.distance)[0];

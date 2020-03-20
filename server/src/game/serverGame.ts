@@ -39,8 +39,8 @@ export class ServerGame {
   }
 
   init() {
-    this.gameHeight = this.gameWidth = 25000;
-    for (let i = 0; i < 600; i++) {
+    this.gameHeight = this.gameWidth = GameConstants.gameSize;
+    for (let i = 0; i < GameConstants.numberOfDeadEmitters; i++) {
       const {x, y} = this.getSafePosition();
       this.addNewDeadEmitter(x, y, 2);
     }
@@ -122,7 +122,13 @@ export class ServerGame {
     this.sendGameData(connectionId);
 
     const emitter = this.addNewEmitter(startingX, startingY, 3, teamId, true);
-    this.addNewSwarm(startingX, startingY, 110, emitter.emitterId, teamId);
+    this.addNewSwarm(
+      startingX,
+      startingY,
+      GameConstants.debug ? GameConstants.emitterDotCap : 110,
+      emitter.emitterId,
+      teamId
+    );
     this.sendTeams();
   }
 
@@ -139,7 +145,7 @@ export class ServerGame {
 
   serverTick(tickIndex: number, duration: number, tickTime: number) {
     console.log(
-      `tick:${tickIndex}, Teams: ${this.teams.length}, Messages:${this.queuedMessages.length}, Swarms: ${this.swarms.length}, Emitters: ${this.emitters.length}, In: ${this.serverSocket.totalBytesReceived}, Out: ${this.serverSocket.totalBytesSent}, Duration: ${tickTime}`
+      `tick: ${tickIndex}, Teams: ${this.teams.length}, Messages:${this.queuedMessages.length}, Swarms: ${this.swarms.length}, Emitters: ${this.emitters.length}, In: ${this.serverSocket.totalBytesReceived}, Out: ${this.serverSocket.totalBytesSent}, Duration: ${tickTime}`
     );
 
     const time = +new Date();
@@ -184,7 +190,7 @@ export class ServerGame {
     for (const swarm of this.swarms) {
       if (tickIndex % 5 === 0 && swarm.battledThisTick.length === 0) {
         if (!swarm.ownerEmitterId) {
-          swarm.augmentDotCount(-Math.round(swarm.dotCount * GameConstants.depleterRatio));
+          swarm.augmentDotCount(Math.min(-Math.ceil(swarm.dotCount * GameConstants.depleterRatio), 0));
         }
       }
       swarm.battledThisTick.length = 0;
@@ -273,8 +279,17 @@ export class ServerGame {
 
   addNewDeadEmitter(x: number, y: number, power: number) {
     const emitterId = nextId();
-    this.emitters.push(new ServerDeadEmitter(this, x, y, power, emitterId));
-    this.sendMessageToClients({type: 'new-dead-emitter', x, y, power, emitterId});
+    const serverDeadEmitter = new ServerDeadEmitter(this, x, y, power, emitterId);
+    this.emitters.push(serverDeadEmitter);
+    this.sendMessageToClients({
+      type: 'new-dead-emitter',
+      x,
+      y,
+      power,
+      emitterId,
+      duration: serverDeadEmitter.duration,
+      life: serverDeadEmitter.life,
+    });
   }
 
   moveDots(x: number, y: number, teamId: string, swarms: {swarmId: number; percent: number}[]) {
@@ -312,8 +327,10 @@ export class ServerGame {
         }
         if (MathUtils.overlapCircles(swarm, mergableSwarm, 0)) {
           if ((swarm.dotCount > mergableSwarm.dotCount || swarm.ownerEmitterId) && !mergableSwarm.ownerEmitterId) {
+            // console.log('try merge1', swarm.swarmId, mergableSwarm.dotCount);
             const remainder = swarm.augmentDotCount(mergableSwarm.dotCount);
             if (remainder > 0) {
+              // console.log('try merge2', swarm.swarmId, mergableSwarm.dotCount);
               mergableSwarm.augmentDotCount(remainder - mergableSwarm.dotCount);
             } else {
               this.removeSwarm(mergableSwarm.swarmId);
@@ -324,8 +341,10 @@ export class ServerGame {
             if (swarm.ownerEmitterId) {
               continue;
             }
+            // console.log('try merge3', mergableSwarm.swarmId, swarm.dotCount);
             const remainder = mergableSwarm.augmentDotCount(swarm.dotCount);
             if (remainder > 0) {
+              // console.log('try merge4', swarm.swarmId, remainder - swarm.dotCount);
               swarm.augmentDotCount(remainder - swarm.dotCount);
             } else {
               this.removeSwarm(swarm.swarmId);
@@ -347,6 +366,7 @@ export class ServerGame {
       throw new Error('Bunko remove swarm');
     }
 
+    this.swarms[index].remove();
     this.swarms.splice(index, 1);
     this.sendMessageToClients({
       type: 'remove-swarm',
@@ -420,6 +440,7 @@ export class ServerGame {
           dead: e => ({
             type: 'dead',
             life: e.life,
+            duration: e.duration,
             emitterId: e.emitterId,
             x: e.x,
             y: e.y,

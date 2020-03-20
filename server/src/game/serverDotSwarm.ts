@@ -33,10 +33,11 @@ export class ServerDotSwarm extends BaseDotSwarm {
       return;
     }
     let remainder = 0;
-    if (dotCount > 0 && this.dotCount + dotCount > GameConstants.maxDotsPerSwarm) {
-      const newDotCount = GameConstants.maxDotsPerSwarm - this.dotCount;
+    const maxDotsPerSwarm = GameConstants.maxDotsPerSwarm;
+    if (dotCount > 0 && this.dotCount + dotCount > maxDotsPerSwarm) {
+      const newDotCount = maxDotsPerSwarm - this.dotCount;
       remainder = dotCount - newDotCount;
-      this.dotCount = GameConstants.maxDotsPerSwarm;
+      this.dotCount = maxDotsPerSwarm;
       dotCount = newDotCount;
     } else {
       this.dotCount = this.dotCount + dotCount;
@@ -75,8 +76,13 @@ export class ServerDotSwarm extends BaseDotSwarm {
     }
 
     const foundSwarms = this.game.swarmBush.search(this.bushNode);
-
+    if (this.game.swarmBush.all().length !== this.game.swarms.length) {
+      console.log(this.game.swarmBush.all().length, this.game.swarms.length);
+    }
     for (const {item: swarm} of foundSwarms) {
+      if (swarm.swarmId === this.swarmId) {
+        continue;
+      }
       if (swarm.teamId !== this.teamId) {
         if (swarm.battledThisTick.includes(this.swarmId)) {
           continue;
@@ -90,6 +96,7 @@ export class ServerDotSwarm extends BaseDotSwarm {
             swarm.dotCount,
             this.dotCount
           );
+          // console.log('augmenting', -power, this.swarmId, swarm.swarmId);
           this.augmentDotCount(-power);
           swarm.augmentDotCount(-power);
           swarm.battledThisTick.push(this.swarmId);
@@ -112,6 +119,7 @@ export class ServerDotSwarm extends BaseDotSwarm {
 
         if (MathUtils.overlapCircles(this, emitter)) {
           const power = Math.min(Math.max(Math.ceil(this.dotCount / 9)), this.dotCount, emitter.life);
+          // console.log('merging to dead augmenting', -power, this.swarmId);
           this.augmentDotCount(-power);
           const attackResult = emitter.attack(power);
 
@@ -134,5 +142,9 @@ export class ServerDotSwarm extends BaseDotSwarm {
       x,
       y,
     });
+  }
+
+  remove() {
+    this.game.swarmBush.remove(this.bushNode);
   }
 }

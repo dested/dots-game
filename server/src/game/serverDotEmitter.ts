@@ -2,9 +2,11 @@ import {GameConstants} from '../../../common/src/game/gameConstants';
 import {RNode} from '../rbush';
 import {ServerEmitter} from './serverEmitter';
 import {ServerGame} from './serverGame';
+import {ServerDotSwarm} from './serverDotSwarm';
 
 export class ServerDotEmitter implements ServerEmitter {
   private bushNode: RNode<ServerDotEmitter>;
+  private _mySwarm: ServerDotSwarm;
 
   constructor(
     public game: ServerGame,
@@ -25,17 +27,21 @@ export class ServerDotEmitter implements ServerEmitter {
     game.emitterBush.insert(this.bushNode);
   }
 
+  get mySwarm() {
+    if (!this._mySwarm) {
+      this._mySwarm = this.game.swarms.find(a => a.ownerEmitterId === this.emitterId)!;
+    }
+    return this._mySwarm;
+  }
+
   get radius() {
-    return this.game.swarms.find(a => a.ownerEmitterId === this.emitterId)!.radius;
+    return this.mySwarm.radius;
   }
 
   serverTick(tickIndex: number) {
-    const find = this.game.swarms.find(a => a.ownerEmitterId === this.emitterId);
-    if (!find) {
-      // debugger;
-      throw new Error('bnunko');
+    if (this.mySwarm.dotCount < GameConstants.emitterDotCap) {
+      this.mySwarm.augmentDotCount(Math.min(this.power, GameConstants.emitterDotCap - this.mySwarm.dotCount));
     }
-    find.augmentDotCount(Math.min(this.power, GameConstants.maxDotsPerSwarm - find.dotCount));
   }
 
   remove(): void {

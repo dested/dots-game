@@ -26,7 +26,7 @@ export type ServerToClientMessage =
     } & GameConfig)
   | {type: 'new-emitter'; x: number; y: number; power: number; emitterId: number; teamId: string}
   | {type: 'dead'}
-  | {type: 'new-dead-emitter'; x: number; y: number; power: number; emitterId: number}
+  | {type: 'new-dead-emitter'; x: number; y: number; power: number; life: number; duration: number; emitterId: number}
   | {type: 'set-dead-emitter-life'; life: number; emitterId: number}
   | {type: 'set-dead-emitter-duration'; duration: number; emitterId: number}
   | {type: 'remove-swarm'; swarmId: number}

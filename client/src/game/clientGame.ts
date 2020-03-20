@@ -21,11 +21,33 @@ export class ClientGame {
   protected socket: ClientSocket;
   protected isDead: boolean = false;
 
-  constructor(private options: {onDied: () => void; onDisconnect: () => void}) {
+  constructor(private options: {onDied: (me: ClientGame) => void; onDisconnect: (me: ClientGame) => void}) {
     this.connectionId = uuid();
+    this.socket = new ClientSocket();
+    this.socket.connect({
+      onOpen: () => {
+        this.sendMessageToServer({type: 'join'});
+      },
+      onDisconnect: () => {
+        options.onDisconnect(this);
+      },
+
+      onMessage: messages => {
+        this.processMessages(messages);
+      },
+    });
+
+    this.startTick();
+  }
+
+  private startTick() {
     let time = +new Date();
     let paused = 0;
-    setInterval(() => {
+    const int = setInterval(() => {
+      if (this.isDead) {
+        clearInterval(int);
+        return;
+      }
       const now = +new Date();
       const duration = now - time;
       if (duration > 900 || duration < 4) {
@@ -42,20 +64,6 @@ export class ClientGame {
       this.tick(duration);
       time = +new Date();
     }, 1000 / 60);
-
-    this.socket = new ClientSocket();
-    this.socket.connect({
-      onOpen: () => {
-        this.sendMessageToServer({type: 'join'});
-      },
-      onDisconnect: () => {
-        options.onDisconnect();
-      },
-
-      onMessage: messages => {
-        this.processMessages(messages);
-      },
-    });
   }
 
   sendMove(x: number, y: number, swarms: {swarmId: number; percent: number}[]) {
@@ -71,6 +79,7 @@ export class ClientGame {
     this.isDead = false;
     this.emitters.length = 0;
     this.swarms.length = 0;
+    this.startTick();
     this.sendMessageToServer({type: 'join'});
   }
 
@@ -88,7 +97,14 @@ export class ClientGame {
           this.addNewEmitter(emitter.emitterId, emitter.x, emitter.y, emitter.power, emitter.teamId);
           break;
         case 'dead':
-          this.addNewDeadEmitter(emitter.emitterId, emitter.x, emitter.y, emitter.power);
+          this.addNewDeadEmitter(
+            emitter.emitterId,
+            emitter.x,
+            emitter.y,
+            emitter.power,
+            emitter.life,
+            emitter.duration
+          );
           break;
         default:
           unreachable(emitter);
@@ -105,6 +121,7 @@ export class ClientGame {
   }
 
   processMessages(messages: ServerToClientMessage[]) {
+    // console.log(JSON.stringify(messages.filter(a => a.type === 'augment-dot-count')));
     for (const message of messages) {
       switch (message.type) {
         case 'joined':
@@ -118,7 +135,14 @@ export class ClientGame {
           this.addNewEmitter(message.emitterId, message.x, message.y, message.power, message.teamId);
           break;
         case 'new-dead-emitter':
-          this.addNewDeadEmitter(message.emitterId, message.x, message.y, message.power);
+          this.addNewDeadEmitter(
+            message.emitterId,
+            message.x,
+            message.y,
+            message.power,
+            message.life,
+            message.duration
+          );
           break;
         case 'set-dead-emitter-life':
           {
@@ -172,7 +196,7 @@ export class ClientGame {
         case 'dead':
           {
             this.isDead = true;
-            this.options.onDied();
+            this.options.onDied(this);
           }
           break;
         default:
@@ -206,33 +230,39 @@ export class ClientGame {
     return dotSwarm;
   }
 
-  addNewDeadEmitter(emitterId: number, x: number, y: number, power: number) {
-    this.emitters.push(new ClientDeadEmitter(this, x, y, power, emitterId));
+  addNewDeadEmitter(emitterId: number, x: number, y: number, power: number, life: number, duration: number) {
+    this.emitters.push(new ClientDeadEmitter(this, x, y, power, emitterId, life, duration));
   }
 
   removeSwarm(swarmId: number) {
     const index = this.swarms.findIndex(a => a.swarmId === swarmId);
     if (index === -1) {
-      throw new Error('Bunko remove swarm');
+      // throw new Error('Bunko remove swarm');
+    } else {
+      this.swarms.splice(index, 1);
     }
-    this.swarms.splice(index, 1);
   }
 
   killEmitter(emitterId: number) {
     const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
     if (emitterIndex === -1) {
-      // debugger;
-      throw new Error('Bunko kill emitter');
+      // throw new Error('Bunko kill emitter');
+    } else {
+      this.emitters.splice(emitterIndex, 1);
     }
-    this.emitters.splice(emitterIndex, 1);
   }
 
   removeEmitter(emitterId: number) {
     const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
     if (emitterIndex === -1) {
       // debugger;
-      throw new Error('Bunko remove emitter');
+      // throw new Error('Bunko remove emitter');
+    } else {
+      this.emitters.splice(emitterIndex, 1);
     }
-    this.emitters.splice(emitterIndex, 1);
+  }
+
+  disconnect() {
+    this.socket.disconnect();
   }
 }

@@ -94,7 +94,7 @@ const App: React.FC<{width: number; height: number}> = props => {
           onClick={() => {
             AnimationUtils.start({
               start: client.current!.view.scale,
-              finish: 0.034,
+              finish: 0.2,
               duration: 500,
               easing: AnimationUtils.easings.linear,
               callback: c => {

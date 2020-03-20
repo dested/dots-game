@@ -30,5 +30,6 @@ export type GameConfigEmitter =
       y: number;
       emitterId: number;
       life: number;
+      duration: number;
       power: number;
     };

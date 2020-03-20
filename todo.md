@@ -6,6 +6,10 @@
  - [ ] come up with name
  - [ ] replace sprites
  - [ ] balance game
+ - [ ] add spectate
+ - [ ] add event for fireworks when attack happens
+ - [ ] add readme
+ - [ ] add scores
  - [ ] add login
  - [ ]   add name to join
  - [ ] add leaderboard

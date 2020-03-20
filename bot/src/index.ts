@@ -12,11 +12,18 @@ async function main() {
     onDied: () => {},
   });
   return;*/
-  for (let i = 0; i < 100; i++) {
-    const clientGame = new BotClientGame({
-      onDisconnect: () => {},
-      onDied: () => {},
-    });
+  for (let i = 0; i < 300; i++) {
+    const options = {
+      onDisconnect: () => {
+        new BotClientGame(options);
+      },
+      onDied: (me: ClientGame) => {
+        me.disconnect();
+        new BotClientGame(options);
+      },
+    };
+
+    new BotClientGame(options);
     await Utils.timeout(100);
   }
 }

@@ -127,10 +127,13 @@ export class ClientGameUI extends ClientGame {
         if (MathUtils.inCircle(x, y, emitter.x, emitter.y, emitter.radius)) {
           if (selected) {
           } else {
-            for (const dot of this.swarms.find(a => a.ownerEmitterId === emitter.emitterId)!.dots) {
-              dot.selected = true;
+            let foundSwarm = this.swarms.find(a => a.ownerEmitterId === emitter.emitterId);
+            if (foundSwarm) {
+              for (const dot of foundSwarm.dots) {
+                dot.selected = true;
+              }
+              return;
             }
-            return;
           }
         }
       }

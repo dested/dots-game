@@ -10,8 +10,18 @@ export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter 
   life: number = GameConstants.deadEmitterStartingLife;
   duration: number = GameConstants.deadEmitterStartingDuration;
 
-  constructor(public game: ClientGame, x: number, y: number, power: number, emitterId: number) {
+  constructor(
+    public game: ClientGame,
+    x: number,
+    y: number,
+    power: number,
+    emitterId: number,
+    life: number,
+    duration: number
+  ) {
     super(x, y, power, emitterId);
+    this.life = life;
+    this.duration = duration;
   }
 
   tick() {}
@@ -20,8 +30,8 @@ export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter 
     context.save();
     context.strokeStyle = 'white';
     context.lineWidth = 3;
-    context.fillStyle =
-      '#d4d4d4' + ColorUtils.getTransparentHex(1 - this.duration / GameConstants.deadEmitterStartingDuration);
+    const percent = this.duration / GameConstants.deadEmitterStartingDuration;
+    context.fillStyle = '#d4d4d4' + ColorUtils.getTransparentHex(percent);
 
     CanvasUtils.circle(
       context,
@@ -32,9 +42,12 @@ export class ClientDeadEmitter extends BaseDeadEmitter implements ClientEmitter 
     context.stroke();
     context.fill();
     if (GameConstants.debugDraw) {
-      context.font = '30px bold';
+/*
+      context.font = '60px bold';
       context.fillStyle = 'red';
-      context.fillText(this.life.toString(), this.x, this.y);
+      // context.fillText(this.life.toString(), this.x, this.y);
+      context.fillText(this.duration.toString() + '-' + percent, this.x, this.y);
+*/
     }
     context.restore();
   }

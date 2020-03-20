@@ -59,6 +59,6 @@ export class ColorUtils {
   static getTransparentHex(percent: number) {
     const values = Math.max(percent * 255, 0);
     const x = Math.min(values, 255);
-    return Math.round(x).toString(16);
+    return ('00' + Math.round(x).toString(16)).substr(-2);
   }
 }

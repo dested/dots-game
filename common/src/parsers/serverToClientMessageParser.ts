@@ -54,6 +54,7 @@ export class ServerToClientMessageParser {
                 buff.addInt32(emitter.y);
                 buff.addUint8(emitter.power);
                 buff.addUint16(emitter.life);
+                buff.addUint16(emitter.duration);
                 break;
               default:
                 unreachable(emitter);
@@ -78,6 +79,8 @@ export class ServerToClientMessageParser {
           buff.addInt32(message.y);
           buff.addUint8(message.power);
           buff.addInt32(message.emitterId);
+          buff.addUint16(message.duration);
+          buff.addUint16(message.life);
           break;
         case 'set-dead-emitter-life':
           buff.addUint8(6);
@@ -176,14 +179,17 @@ export class ServerToClientMessageParser {
                   y: reader.readInt32(),
                   power: reader.readUint8(),
                 }),
-                2: () => ({
-                  type: 'dead',
-                  emitterId: reader.readInt32(),
-                  x: reader.readInt32(),
-                  y: reader.readInt32(),
-                  power: reader.readUint8(),
-                  life: reader.readUint16(),
-                }),
+                2: () => {
+                  return {
+                    type: 'dead',
+                    emitterId: reader.readInt32(),
+                    x: reader.readInt32(),
+                    y: reader.readInt32(),
+                    power: reader.readUint8(),
+                    life: reader.readUint16(),
+                    duration: reader.readUint16(),
+                  };
+                },
               })
             ),
           };
@@ -207,6 +213,8 @@ export class ServerToClientMessageParser {
             y: reader.readInt32(),
             power: reader.readUint8(),
             emitterId: reader.readInt32(),
+            duration: reader.readUint16(),
+            life: reader.readUint16(),
           };
         case 6:
           return {
