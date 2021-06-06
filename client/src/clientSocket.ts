@@ -12,7 +12,7 @@ export class ClientSocket implements IClientSocket {
     onDisconnect: () => void;
   }) {
     // this.socket = new WebSocket('wss://game.quickga.me');
-    this.socket = new WebSocket('ws://localhost:8081');
+    this.socket = new WebSocket('ws://localhost:8082');
     this.socket.binaryType = 'arraybuffer';
     this.socket.onopen = () => {
       options.onOpen();

@@ -9,34 +9,41 @@ import {ClientSocket} from './clientSocket';
 import {ClientGame} from './game/clientGame';
 import {Utils} from '../../common/src/utils/utils';
 
-const App: React.FC<{width: number; height: number}> = props => {
+const BOTS = false;
+const App: React.FC<{width: number; height: number}> = (props) => {
   const client = useRef<ClientGameUI>(null);
   const [died, setDied] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
-  useEffect(() => {
-    const serverSocket = new LocalServerSocket();
-    const serverGame = new ServerGame(serverSocket);
-    serverGame.init();
+  if (BOTS) {
+    useEffect(() => {
+      const serverSocket = new LocalServerSocket();
+      const serverGame = new ServerGame(serverSocket);
+      serverGame.init();
 
-    setTimeout(async () => {
+      setTimeout(async () => {
+        connect();
+
+        for (let i = 0; i < 25; i++) {
+          const options = {
+            onDisconnect: () => {
+              new BotClientGame(options, new LocalClientSocket());
+            },
+            onDied: (me: ClientGame) => {
+              me.disconnect();
+              new BotClientGame(options, new LocalClientSocket());
+            },
+          };
+
+          new BotClientGame(options, new LocalClientSocket());
+          await Utils.timeout(100);
+        }
+      }, 50);
+    }, []);
+  } else {
+    useEffect(() => {
       connect();
-
-      for (let i = 0; i < 50; i++) {
-        const options = {
-          onDisconnect: () => {
-            new BotClientGame(options, new LocalClientSocket());
-          },
-          onDied: (me: ClientGame) => {
-            me.disconnect();
-            new BotClientGame(options, new LocalClientSocket());
-          },
-        };
-
-        new BotClientGame(options, new LocalClientSocket());
-        await Utils.timeout(100);
-      }
-    }, 50);
-  }, []);
+    }, []);
+  }
 
   function connect() {
     (client as React.MutableRefObject<ClientGameUI>).current = new ClientGameUI(
@@ -48,7 +55,7 @@ const App: React.FC<{width: number; height: number}> = props => {
           setDisconnected(true);
         },
       },
-      new LocalClientSocket()
+      new ClientSocket()
     );
   }
 
@@ -113,7 +120,7 @@ const App: React.FC<{width: number; height: number}> = props => {
               finish: 1,
               duration: 500,
               easing: AnimationUtils.easings.linear,
-              callback: c => {
+              callback: (c) => {
                 client.current!.view.setScale(c);
               },
             });
@@ -129,7 +136,7 @@ const App: React.FC<{width: number; height: number}> = props => {
               finish: 0.2,
               duration: 500,
               easing: AnimationUtils.easings.linear,
-              callback: c => {
+              callback: (c) => {
                 client.current!.view.setScale(c);
               },
             });

@@ -14,7 +14,7 @@ export class ServerSocket implements IServerSocket {
     onLeave: (connectionId: string) => void,
     onMessage: (connectionId: string, message: ClientToServerMessage) => void
   ) {
-    const port = parseInt(process.env.PORT || '8081');
+    const port = parseInt(process.env.PORT || '8082');
     this.wss = new WebServer.Server({port, perMessageDeflate: false});
     this.wss.on('error', (a: any, b: any) => {
       console.error('error', a, b);

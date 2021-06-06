@@ -10,6 +10,6 @@ export class GameConstants {
   static binaryTransport = true;
   static depleterRatio = 0.007;
   static maxSwarmRadius = 80;
-  static numberOfDeadEmitters = 50 * 10;
-  static gameSize = 8000;
+  static numberOfDeadEmitters = 50 * 5;
+  static gameSize = 4000;
 }

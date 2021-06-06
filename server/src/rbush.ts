@@ -2,7 +2,7 @@
 
 import quickselect from 'quickselect';
 
-type BBox = {
+export type BBox = {
   minX: number;
   minY: number;
   maxX: number;
