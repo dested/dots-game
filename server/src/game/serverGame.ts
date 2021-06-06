@@ -224,7 +224,7 @@ export class ServerGame {
     }
     for (const teamId of Object.keys(deadTeams)) {
       console.log('died', teamId);
-      const team = this.teams.find((a) => a.teamId === teamId);
+      const team = this.teams.find((a) => a.teamId === teamId)!;
       this.sendMessageToClient(team.connectionId, {
         type: 'dead',
       });
@@ -268,7 +268,7 @@ export class ServerGame {
     return dotEmitter;
   }
 
-  addNewSwarm(x: number, y: number, dotCount: number, ownerEmitterId: number | null, teamId: string) {
+  addNewSwarm(x: number, y: number, dotCount: number, ownerEmitterId: number | undefined, teamId: string) {
     const swarmId = nextId();
     const dotSwarm = new ServerDotSwarm(this, swarmId, x, y, ownerEmitterId, teamId);
     this.sendMessageToClients({type: 'new-swarm', x, y, swarmId, ownerEmitterId, teamId});
@@ -307,7 +307,7 @@ export class ServerGame {
       } else {
         const dotCount = Math.round(swarm.dotCount * percent);
 
-        const newSwarm = this.addNewSwarm(swarm.x, swarm.y, dotCount, null, swarm.teamId);
+        const newSwarm = this.addNewSwarm(swarm.x, swarm.y, dotCount, undefined, swarm.teamId);
         newSwarm.setHeading(x, y);
         swarm.augmentDotCount(-dotCount);
       }

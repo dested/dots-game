@@ -12,7 +12,7 @@ export class ServerDotSwarm extends BaseDotSwarm {
     swarmId: number,
     x: number,
     y: number,
-    ownerEmitterId: number | null,
+    ownerEmitterId: number | undefined,
     teamId: string
   ) {
     super(swarmId, x, y, ownerEmitterId, teamId);
@@ -22,6 +22,7 @@ export class ServerDotSwarm extends BaseDotSwarm {
       maxX: x + GameConstants.maxSwarmRadius,
       maxY: y + GameConstants.maxSwarmRadius,
       item: this,
+      children: null!,
     };
     game.swarmBush.insert(this.bushNode);
   }
@@ -30,7 +31,7 @@ export class ServerDotSwarm extends BaseDotSwarm {
 
   augmentDotCount(dotCount: number) {
     if (dotCount === 0) {
-      return;
+      return 0;
     }
     let remainder = 0;
     const maxDotsPerSwarm = GameConstants.maxDotsPerSwarm;

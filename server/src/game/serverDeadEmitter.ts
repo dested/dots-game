@@ -5,8 +5,8 @@ import {ServerEmitter} from './serverEmitter';
 import {ServerGame} from './serverGame';
 
 export class ServerDeadEmitter extends BaseDeadEmitter implements ServerEmitter {
-  duration: number;
-  life: number;
+  duration!: number;
+  life!: number;
   lastAttack = 0;
   private bushNode: RNode<ServerDeadEmitter>;
 
@@ -19,6 +19,7 @@ export class ServerDeadEmitter extends BaseDeadEmitter implements ServerEmitter 
       maxX: x + GameConstants.maxSwarmRadius,
       maxY: y + GameConstants.maxSwarmRadius,
       item: this,
+      children: null!,
     };
     game.emitterBush.insert(this.bushNode);
 

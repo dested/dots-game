@@ -38,7 +38,8 @@ export const Bush: React.FC<{width: number; height: number}> = (props) => {
           minY: y - playerSize,
           maxX: x + playerSize,
           maxY: y + playerSize,
-          item: undefined as any,
+          item: undefined!,
+          children: undefined!,
         },
       };
       player.bush.item = player;

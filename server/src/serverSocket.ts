@@ -1,4 +1,4 @@
-import * as WebServer from 'ws';
+import WebSocket, {Server} from 'ws';
 import {GameConstants} from '../../common/src/game/gameConstants';
 import {ClientToServerMessage, ServerToClientMessage} from '../../common/src/models/messages';
 import {ClientToServerMessageParser} from '../../common/src/parsers/clientToServerMessageParser';
@@ -6,8 +6,8 @@ import {ServerToClientMessageParser} from '../../common/src/parsers/serverToClie
 import {uuid} from '../../common/src/utils/uuid';
 
 export class ServerSocket implements IServerSocket {
-  wss?: WebServer.Server;
-  connections: {connectionId: string; socket: WebServer.WebSocket}[] = [];
+  wss?: Server;
+  connections: {connectionId: string; socket: WebSocket}[] = [];
 
   start(
     onJoin: (connectionId: string) => void,
@@ -15,14 +15,14 @@ export class ServerSocket implements IServerSocket {
     onMessage: (connectionId: string, message: ClientToServerMessage) => void
   ) {
     const port = parseInt(process.env.PORT || '8082');
-    this.wss = new WebServer.Server({port, perMessageDeflate: false});
+    this.wss = new Server({port, perMessageDeflate: false});
     this.wss.on('error', (a: any, b: any) => {
       console.error('error', a, b);
     });
 
     this.wss.on('connection', (ws) => {
       ws.binaryType = 'arraybuffer';
-      const me = {socket: ws, connectionId: uuid()};
+      const me = {socket: ws as unknown as WebSocket, connectionId: uuid()};
       // console.log('new connection', me.connectionId);
       this.connections.push(me);
 

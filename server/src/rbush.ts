@@ -13,7 +13,7 @@ export type RNode<T> = {
   minY: number;
   maxX: number;
   maxY: number;
-  children?: RNode<T>[];
+  children: RNode<T>[];
   leaf?: boolean;
   height?: number;
 
@@ -30,7 +30,7 @@ export class RBush<T> {
     this.clear();
   }
 
-  data: RNode<T>;
+  data!: RNode<T>;
 
   all() {
     return this._all(this.data, []);
@@ -46,8 +46,8 @@ export class RBush<T> {
     const nodesToSearch = [];
 
     while (node) {
-      for (let i = 0; i < node.children.length; i++) {
-        const child = node.children[i];
+      for (let i = 0; i < node.children!.length; i++) {
+        const child = node.children![i];
         const childBBox = node.leaf ? toBBox(child) : child;
 
         if (intersects(bbox, childBBox)) {
@@ -56,7 +56,7 @@ export class RBush<T> {
           else nodesToSearch.push(child);
         }
       }
-      node = nodesToSearch.pop();
+      node = nodesToSearch.pop()!;
     }
 
     return result;
@@ -69,8 +69,8 @@ export class RBush<T> {
 
     const nodesToSearch = [];
     while (node) {
-      for (let i = 0; i < node.children.length; i++) {
-        const child = node.children[i];
+      for (let i = 0; i < node.children!.length; i++) {
+        const child = node.children![i];
         const childBBox = node.leaf ? this.toBBox(child) : child;
 
         if (intersects(bbox, childBBox)) {
@@ -78,7 +78,7 @@ export class RBush<T> {
           nodesToSearch.push(child);
         }
       }
-      node = nodesToSearch.pop();
+      node = nodesToSearch.pop()!;
     }
 
     return false;
@@ -97,14 +97,14 @@ export class RBush<T> {
     // recursively build the tree with the given data from scratch using OMT algorithm
     let node = this._build(data.slice(), 0, data.length - 1, 0);
 
-    if (!this.data.children.length) {
+    if (!this.data.children!.length) {
       // save as is if tree is empty
       this.data = node;
     } else if (this.data.height === node.height) {
       // split root if trees have the same height
       this._splitRoot(this.data, node);
     } else {
-      if (this.data.height < node.height) {
+      if (this.data.height! < node.height!) {
         // swap trees if inserted one is bigger
         const tmpNode = this.data;
         this.data = node;
@@ -112,14 +112,14 @@ export class RBush<T> {
       }
 
       // insert the small tree into the large tree at appropriate level
-      this._insert(node, this.data.height - node.height - 1, true);
+      this._insert(node, this.data.height! - node.height! - 1, true);
     }
 
     return this;
   }
 
   insert(item: RNode<T>) {
-    if (item) this._insert(item, this.data.height - 1);
+    if (item) this._insert(item, this.data.height! - 1);
     return this;
   }
 
@@ -161,25 +161,25 @@ export class RBush<T> {
     const bbox = this.toBBox(item);
     const path = [];
     const indexes: number[] = [];
-    let i, parent, goingUp;
+    let i: number, parent, goingUp;
 
     // depth-first iterative tree traversal
     while (node || path.length) {
       if (!node) {
         // go up
-        node = path.pop();
+        node = path.pop()!;
         parent = path[path.length - 1];
-        i = indexes.pop();
+        i = indexes.pop()!;
         goingUp = true;
       }
 
       if (node.leaf) {
         // check current node
-        const index = findItem(item, node.children, equalsFn);
+        const index = findItem(item, node.children!, equalsFn!);
 
         if (index !== -1) {
           // item found, remove the item and condense tree upwards
-          node.children.splice(index, 1);
+          node.children!.splice(index, 1);
           path.push(node);
           this._condense(path);
           return this;
@@ -189,16 +189,16 @@ export class RBush<T> {
       if (!goingUp && !node.leaf && contains(node, bbox)) {
         // go down
         path.push(node);
-        indexes.push(i);
+        indexes.push(i!);
         i = 0;
         parent = node;
-        node = node.children[0];
+        node = node.children![0];
       } else if (parent) {
         // go right
-        i++;
-        node = parent.children[i];
+        i!++;
+        node = parent.children![i!];
         goingUp = false;
-      } else node = null; // nothing found
+      } else node = null!; // nothing found
     }
 
     return this;
@@ -227,10 +227,10 @@ export class RBush<T> {
   private _all(node: RNode<T>, result: RNode<T>[]) {
     const nodesToSearch = [];
     while (node) {
-      if (node.leaf) result.push(...node.children);
+      if (node.leaf) result.push(...node.children!);
       else nodesToSearch.push(...node.children);
 
-      node = nodesToSearch.pop();
+      node = nodesToSearch.pop()!;
     }
     return result;
   }
@@ -366,7 +366,7 @@ export class RBush<T> {
   private _splitRoot(node: RNode<T>, newNode: RNode<T>) {
     // split root node
     this.data = createNode([node, newNode]);
-    this.data.height = node.height + 1;
+    this.data.height = node.height! + 1;
     this.data.leaf = false;
     calcBBox(this.data, this.toBBox);
   }
@@ -473,7 +473,7 @@ function calcBBox<T>(node: RNode<T>, toBBox: (node: RNode<T>) => BBox) {
 
 // min bounding rectangle of node children from k to p-1
 function distBBox<T>(node: RNode<T>, k: number, p: number, toBBox: (node: RNode<T>) => BBox, destNode?: RNode<T>) {
-  if (!destNode) destNode = createNode<T>(null);
+  if (!destNode) destNode = createNode<T>(null!);
   destNode.minX = Infinity;
   destNode.minY = Infinity;
   destNode.maxX = -Infinity;
@@ -539,7 +539,7 @@ function createNode<T>(children: RNode<T>[]): RNode<T> {
     minY: Infinity,
     maxX: -Infinity,
     maxY: -Infinity,
-    item: null,
+    item: null!,
   };
 }
 
@@ -550,8 +550,8 @@ function multiSelect<T>(arr: T[], left: number, right: number, n: number, compar
   const stack = [left, right];
 
   while (stack.length) {
-    right = stack.pop();
-    left = stack.pop();
+    right = stack.pop()!;
+    left = stack.pop()!;
 
     if (right - left <= n) continue;
 

@@ -14,8 +14,8 @@ const App: React.FC<{width: number; height: number}> = (props) => {
   const client = useRef<ClientGameUI>(null);
   const [died, setDied] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
-  if (BOTS) {
-    useEffect(() => {
+  useEffect(() => {
+    if (BOTS) {
       const serverSocket = new LocalServerSocket();
       const serverGame = new ServerGame(serverSocket);
       serverGame.init();
@@ -38,12 +38,10 @@ const App: React.FC<{width: number; height: number}> = (props) => {
           await Utils.timeout(100);
         }
       }, 50);
-    }, []);
-  } else {
-    useEffect(() => {
+    } else {
       connect();
-    }, []);
-  }
+    }
+  }, []);
 
   function connect() {
     (client as React.MutableRefObject<ClientGameUI>).current = new ClientGameUI(

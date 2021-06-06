@@ -144,7 +144,7 @@ export class BotClientGame extends ClientGame {
         }
         for (const enemyEmitter of enemyEmitters) {
           if (MathUtils.overlapCircles(myRovingSwarm, enemyEmitter, GameConstants.emitterRadius * 6)) {
-            const enemyEmitterSwarm = this.swarms.find((a) => a.ownerEmitterId === enemyEmitter.emitterId);
+            const enemyEmitterSwarm = this.swarms.find((a) => a.ownerEmitterId === enemyEmitter.emitterId)!;
             if (myRovingSwarm.dotCount > enemyEmitterSwarm.dotCount * 1.2) {
               // console.log('sending to enemy emitter');
               this.sendMove(enemyEmitter.x, enemyEmitter.y, [{swarmId: myRovingSwarm.swarmId, percent: 1}]);

@@ -6,7 +6,7 @@ import {ServerDotSwarm} from './serverDotSwarm';
 
 export class ServerDotEmitter implements ServerEmitter {
   private bushNode: RNode<ServerDotEmitter>;
-  private _mySwarm: ServerDotSwarm;
+  private _mySwarm!: ServerDotSwarm;
 
   constructor(
     public game: ServerGame,
@@ -23,6 +23,7 @@ export class ServerDotEmitter implements ServerEmitter {
       maxX: x + GameConstants.maxSwarmRadius,
       maxY: y + GameConstants.maxSwarmRadius,
       item: this,
+      children: null!,
     };
     game.emitterBush.insert(this.bushNode);
   }

@@ -8,12 +8,15 @@ import {ClientSocket} from '../../client/src/clientSocket';
 console.log('started');
 
 async function main() {
-  /*  const clientGame = new BotClientGame({
-    onDisconnect: () => {},
-    onDied: () => {},
-  });
+  /*  const clientGame = new BotClientGame(
+    {
+      onDisconnect: () => {},
+      onDied: () => {},
+    },
+    new ClientSocket()
+  );
   return;*/
-  for (let i = 0; i < 300; i++) {
+  for (let i = 0; i < 500; i++) {
     const options = {
       onDisconnect: () => {
         new BotClientGame(options, new ClientSocket());
