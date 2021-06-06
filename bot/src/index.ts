@@ -29,4 +29,4 @@ async function main() {
   }
 }
 
-main().catch(ex => console.error(ex));
+main().catch((ex) => console.error(ex));

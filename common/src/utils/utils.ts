@@ -81,7 +81,7 @@ export class Utils {
   }
 
   static timeout(timeout: number): Promise<void> {
-    return new Promise(res => {
+    return new Promise((res) => {
       setTimeout(() => {
         res();
       }, timeout);
@@ -116,7 +116,7 @@ export class Utils {
     const maps: {[key in TKey]: TResult[]} = {} as any;
 
     for (const group in groups) {
-      maps[group] = groups[group].map(a => resultCallback(a));
+      maps[group] = groups[group].map((a) => resultCallback(a));
     }
 
     return maps;

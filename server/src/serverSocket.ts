@@ -20,13 +20,13 @@ export class ServerSocket implements IServerSocket {
       console.error('error', a, b);
     });
 
-    this.wss.on('connection', ws => {
+    this.wss.on('connection', (ws) => {
       ws.binaryType = 'arraybuffer';
       const me = {socket: ws, connectionId: uuid()};
       // console.log('new connection', me.connectionId);
       this.connections.push(me);
 
-      ws.on('message', message => {
+      ws.on('message', (message) => {
         if (GameConstants.binaryTransport) {
           this.totalBytesReceived += (message as ArrayBuffer).byteLength;
           onMessage(me.connectionId, ClientToServerMessageParser.toClientToServerMessage(message as ArrayBuffer));
@@ -36,7 +36,7 @@ export class ServerSocket implements IServerSocket {
       });
 
       ws.onclose = () => {
-        const ind = this.connections.findIndex(a => a.connectionId === me.connectionId);
+        const ind = this.connections.findIndex((a) => a.connectionId === me.connectionId);
         if (ind === -1) {
           return;
         }
@@ -48,7 +48,7 @@ export class ServerSocket implements IServerSocket {
   }
 
   sendMessage(connectionId: string, messages: ServerToClientMessage[]) {
-    const client = this.connections.find(a => a.connectionId === connectionId);
+    const client = this.connections.find((a) => a.connectionId === connectionId);
     if (!client) {
       return;
     }

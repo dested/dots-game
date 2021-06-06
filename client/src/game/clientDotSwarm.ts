@@ -75,9 +75,9 @@ export class ClientDotSwarm extends BaseDotSwarm {
       const extra = i < remainingItems ? 1 : 0;
       dot.value = itemsPerBucket + extra;
     }
-    this.dots = this.dots.filter(a => a.value > 0);
-    if (this.dotCount !== MathUtils.sum(this.dots.map(a => a.value))) {
-      throw new Error(`miscount ${this.dotCount} ${MathUtils.sum(this.dots.map(a => a.value))}`);
+    this.dots = this.dots.filter((a) => a.value > 0);
+    if (this.dotCount !== MathUtils.sum(this.dots.map((a) => a.value))) {
+      throw new Error(`miscount ${this.dotCount} ${MathUtils.sum(this.dots.map((a) => a.value))}`);
     }
   }
 
@@ -115,7 +115,7 @@ export class ClientDotSwarm extends BaseDotSwarm {
   }
 
   draw(context: CanvasRenderingContext2D, dragRect?: {x: number; y: number; width: number; height: number}) {
-    const color = this.game.teams.find(t => t.teamId === this.teamId)!.color;
+    const color = this.game.teams.find((t) => t.teamId === this.teamId)!.color;
 
     if ((this.game as ClientGameUI).view.scale < 0.5) {
       context.save();

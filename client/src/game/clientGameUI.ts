@@ -56,15 +56,15 @@ export class ClientGameUI extends ClientGame {
 
     let lastPress: Date = new Date();
     let doubleTap = false;
-    manager.on('press', e => {
+    manager.on('press', (e) => {
       doubleTap = +new Date() - +lastPress < 200;
       lastPress = new Date();
     });
-    manager.on('pressup', e => {
+    manager.on('pressup', (e) => {
       doubleTap = false;
     });
 
-    manager.on('panmove', e => {
+    manager.on('panmove', (e) => {
       if (e.velocity === 0) {
         return;
       }
@@ -81,7 +81,7 @@ export class ClientGameUI extends ClientGame {
       }
     });
 
-    manager.on('panstart', e => {
+    manager.on('panstart', (e) => {
       if (doubleTap) {
         this.startDragDown(
           this.view.viewBox.x + this.view.transformPoint(e.center.x),
@@ -96,7 +96,7 @@ export class ClientGameUI extends ClientGame {
       }
     });
 
-    manager.on('panend', e => {
+    manager.on('panend', (e) => {
       if (doubleTap) {
         this.dragDone();
       }
@@ -107,7 +107,7 @@ export class ClientGameUI extends ClientGame {
       swipeVelocity.y = ev.velocityY * 10;
     });
 
-    manager.on('tap', e => {
+    manager.on('tap', (e) => {
       swipeVelocity.x = swipeVelocity.y = 0;
 
       let selected = false;
@@ -127,7 +127,7 @@ export class ClientGameUI extends ClientGame {
         if (MathUtils.inCircle(x, y, emitter.x, emitter.y, emitter.radius)) {
           if (selected) {
           } else {
-            let foundSwarm = this.swarms.find(a => a.ownerEmitterId === emitter.emitterId);
+            const foundSwarm = this.swarms.find((a) => a.ownerEmitterId === emitter.emitterId);
             if (foundSwarm) {
               for (const dot of foundSwarm.dots) {
                 dot.selected = true;
@@ -143,9 +143,9 @@ export class ClientGameUI extends ClientGame {
           x,
           y,
           this.swarms
-            .filter(a => a.dots.some(d => d.selected))
-            .map(swarm => {
-              const selectedDots = MathUtils.sumC(swarm.dots, a => (a.selected ? 1 : 0));
+            .filter((a) => a.dots.some((d) => d.selected))
+            .map((swarm) => {
+              const selectedDots = MathUtils.sumC(swarm.dots, (a) => (a.selected ? 1 : 0));
               const percent = selectedDots / swarm.dots.length;
 
               return {
@@ -162,7 +162,7 @@ export class ClientGameUI extends ClientGame {
       }
     });
 
-    manager.on('doubletap', e => {
+    manager.on('doubletap', (e) => {
       swipeVelocity.x = swipeVelocity.y = 0;
       for (const swarm of this.swarms) {
         for (const dot of swarm.dots) {

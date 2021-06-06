@@ -36,22 +36,22 @@ export class BotClientGame extends ClientGame {
 
   private tryNextMoves() {
     const myEmitters = this.emitters
-      .filter(emitter => emitter instanceof ClientDotEmitter && emitter.teamId === this.myTeamId)
-      .map(a => a as ClientDotEmitter);
+      .filter((emitter) => emitter instanceof ClientDotEmitter && emitter.teamId === this.myTeamId)
+      .map((a) => a as ClientDotEmitter);
     if (myEmitters.length === 0) {
       console.log('dead');
     }
     const deadEmitters = this.emitters
-      .filter(emitter => emitter instanceof ClientDeadEmitter)
-      .map(a => a as ClientDeadEmitter);
+      .filter((emitter) => emitter instanceof ClientDeadEmitter)
+      .map((a) => a as ClientDeadEmitter);
 
-    const mySwarms = this.swarms.filter(swarm => swarm.teamId === this.myTeamId);
-    const myRovingSwarms = mySwarms.filter(swarm => swarm.ownerEmitterId === undefined);
+    const mySwarms = this.swarms.filter((swarm) => swarm.teamId === this.myTeamId);
+    const myRovingSwarms = mySwarms.filter((swarm) => swarm.ownerEmitterId === undefined);
 
-    const enemySwarms = this.swarms.filter(swarm => swarm.teamId !== this.myTeamId);
+    const enemySwarms = this.swarms.filter((swarm) => swarm.teamId !== this.myTeamId);
     const enemyEmitters = this.emitters
-      .filter(emitter => emitter instanceof ClientDotEmitter && emitter.teamId !== this.myTeamId)
-      .map(a => a as ClientDotEmitter);
+      .filter((emitter) => emitter instanceof ClientDotEmitter && emitter.teamId !== this.myTeamId)
+      .map((a) => a as ClientDotEmitter);
 
     let underAttack = false;
 
@@ -66,7 +66,7 @@ export class BotClientGame extends ClientGame {
         }
       }
 
-      const myEmitterSwarm = mySwarms.find(a => a.ownerEmitterId === emitter.emitterId);
+      const myEmitterSwarm = mySwarms.find((a) => a.ownerEmitterId === emitter.emitterId)!;
       for (const enemySwarm of enemySwarms) {
         if (MathUtils.overlapCircles(emitter, enemySwarm, GameConstants.emitterRadius * 4)) {
           underAttack = true;
@@ -81,7 +81,7 @@ export class BotClientGame extends ClientGame {
           if (myEmitterSwarm.dotCount > deadEmitter.life * 2) {
             const distance = MathUtils.distanceObj(emitter, deadEmitter);
             if (distance < GameConstants.emitterRadius * 50) {
-              if (this.sentToEmitter[emitter.emitterId].find(a => a.emitterId === deadEmitter.emitterId)) {
+              if (this.sentToEmitter[emitter.emitterId].find((a) => a.emitterId === deadEmitter.emitterId)) {
                 continue;
               }
               aroundMe.push({emitter: deadEmitter, distance});
@@ -109,7 +109,7 @@ export class BotClientGame extends ClientGame {
           for (const enemyEmitter of enemyEmitters) {
             const distance = MathUtils.distanceObj(emitter, enemyEmitter);
             if (distance < GameConstants.emitterRadius * 50) {
-              if (this.sentToEmitter[emitter.emitterId].find(a => a.emitterId === enemyEmitter.emitterId)) {
+              if (this.sentToEmitter[emitter.emitterId].find((a) => a.emitterId === enemyEmitter.emitterId)) {
                 continue;
               }
               aroundMe.push({emitter: enemyEmitter, distance});
@@ -144,7 +144,7 @@ export class BotClientGame extends ClientGame {
         }
         for (const enemyEmitter of enemyEmitters) {
           if (MathUtils.overlapCircles(myRovingSwarm, enemyEmitter, GameConstants.emitterRadius * 6)) {
-            const enemyEmitterSwarm = this.swarms.find(a => a.ownerEmitterId === enemyEmitter.emitterId);
+            const enemyEmitterSwarm = this.swarms.find((a) => a.ownerEmitterId === enemyEmitter.emitterId);
             if (myRovingSwarm.dotCount > enemyEmitterSwarm.dotCount * 1.2) {
               // console.log('sending to enemy emitter');
               this.sendMove(enemyEmitter.x, enemyEmitter.y, [{swarmId: myRovingSwarm.swarmId, percent: 1}]);

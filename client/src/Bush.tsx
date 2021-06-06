@@ -11,7 +11,7 @@ const players: Player[] = [];
 const playerSize = 10;
 
 const mousePosition = {x: 0, y: 0};
-export const Bush: React.FC<{width: number; height: number}> = props => {
+export const Bush: React.FC<{width: number; height: number}> = (props) => {
   const [drawBoxes, setDrawBoxes] = useState(false);
   const [numberOfPlayers, setNumberOfPlayers] = useState(200);
   const canvas = useRef<HTMLCanvasElement | null>(null);
@@ -148,7 +148,7 @@ export const Bush: React.FC<{width: number; height: number}> = props => {
       player.bush.maxX = player.x + playerSize;
       player.bush.maxY = player.y + playerSize;
     }
-    bush.load(players.map(a => a.bush));
+    bush.load(players.map((a) => a.bush));
     console.timeEnd('move everyone');
 
     // setTick(tick + 1);
@@ -190,7 +190,7 @@ export const Bush: React.FC<{width: number; height: number}> = props => {
             min={20}
             max={10000}
             value={numberOfPlayers}
-            onChange={e => {
+            onChange={(e) => {
               setNumberOfPlayers(parseInt(e.target.value));
             }}
           />

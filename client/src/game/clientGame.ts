@@ -33,7 +33,7 @@ export class ClientGame {
         options.onDisconnect(this);
       },
 
-      onMessage: messages => {
+      onMessage: (messages) => {
         this.processMessages(messages);
       },
     });
@@ -147,7 +147,7 @@ export class ClientGame {
           break;
         case 'set-dead-emitter-life':
           {
-            const emitter = this.emitters.find(a => a.emitterId === message.emitterId);
+            const emitter = this.emitters.find((a) => a.emitterId === message.emitterId);
             if (emitter && emitter instanceof ClientDeadEmitter) {
               emitter.setLife(message.life);
             }
@@ -155,7 +155,7 @@ export class ClientGame {
           break;
         case 'set-dead-emitter-duration':
           {
-            const emitter = this.emitters.find(a => a.emitterId === message.emitterId);
+            const emitter = this.emitters.find((a) => a.emitterId === message.emitterId);
             if (emitter && emitter instanceof ClientDeadEmitter) {
               emitter.setDuration(message.duration);
             }
@@ -172,7 +172,7 @@ export class ClientGame {
           break;
         case 'augment-dot-count':
           {
-            const swarm = this.swarms.find(a => a.swarmId === message.swarmId);
+            const swarm = this.swarms.find((a) => a.swarmId === message.swarmId);
             if (swarm) {
               swarm.augmentDotCount(message.dotCount);
             }
@@ -183,7 +183,7 @@ export class ClientGame {
           break;
         case 'set-swarm-heading':
           {
-            const swarm = this.swarms.find(a => a.swarmId === message.swarmId);
+            const swarm = this.swarms.find((a) => a.swarmId === message.swarmId);
             if (swarm) {
               swarm.setHeading(message.x, message.y);
             }
@@ -236,7 +236,7 @@ export class ClientGame {
   }
 
   removeSwarm(swarmId: number) {
-    const index = this.swarms.findIndex(a => a.swarmId === swarmId);
+    const index = this.swarms.findIndex((a) => a.swarmId === swarmId);
     if (index === -1) {
       // throw new Error('Bunko remove swarm');
     } else {
@@ -245,7 +245,7 @@ export class ClientGame {
   }
 
   killEmitter(emitterId: number) {
-    const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
+    const emitterIndex = this.emitters.findIndex((a) => a.emitterId === emitterId)!;
     if (emitterIndex === -1) {
       // throw new Error('Bunko kill emitter');
     } else {
@@ -254,7 +254,7 @@ export class ClientGame {
   }
 
   removeEmitter(emitterId: number) {
-    const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
+    const emitterIndex = this.emitters.findIndex((a) => a.emitterId === emitterId)!;
     if (emitterIndex === -1) {
       // debugger;
       // throw new Error('Bunko remove emitter');

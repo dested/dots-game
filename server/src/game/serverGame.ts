@@ -28,8 +28,8 @@ export class ServerGame {
     this.emitterBush = new RBush();
 
     serverSocket.start(
-      connectionId => {},
-      connectionId => {
+      (connectionId) => {},
+      (connectionId) => {
         this.clientLeave(connectionId);
       },
       (connectionId, message) => {
@@ -87,7 +87,7 @@ export class ServerGame {
   }
 
   clientLeave(connectionId: string) {
-    const client = this.teams.find(c => c.connectionId === connectionId);
+    const client = this.teams.find((c) => c.connectionId === connectionId);
     if (!client) {
       return;
     }
@@ -163,7 +163,7 @@ export class ServerGame {
           this.clientJoin(q.connectionId);
           break;
         case 'move-dots':
-          const client = this.teams.find(a => a.connectionId === q.connectionId);
+          const client = this.teams.find((a) => a.connectionId === q.connectionId);
           if (!client) {
             continue;
           }
@@ -212,7 +212,7 @@ export class ServerGame {
       }
     }
 
-    const deadTeams = Utils.toDictionary(this.teams, a => a.teamId);
+    const deadTeams = Utils.toDictionary(this.teams, (a) => a.teamId);
 
     for (const swarm of this.swarms) {
       delete deadTeams[swarm.teamId];
@@ -224,7 +224,7 @@ export class ServerGame {
     }
     for (const teamId of Object.keys(deadTeams)) {
       console.log('died', teamId);
-      const team = this.teams.find(a => a.teamId === teamId);
+      const team = this.teams.find((a) => a.teamId === teamId);
       this.sendMessageToClient(team.connectionId, {
         type: 'dead',
       });
@@ -295,7 +295,7 @@ export class ServerGame {
   moveDots(x: number, y: number, teamId: string, swarms: {swarmId: number; percent: number}[]) {
     for (let i = this.swarms.length - 1; i >= 0; i--) {
       const swarm = this.swarms[i];
-      const swarmMove = swarms.find(a => swarm.swarmId === a.swarmId);
+      const swarmMove = swarms.find((a) => swarm.swarmId === a.swarmId);
       if (teamId !== swarm.teamId || !swarmMove) {
         continue;
       }
@@ -315,7 +315,7 @@ export class ServerGame {
   }
 
   tryMergeSwarm(mergableSwarmId: number) {
-    let mergableSwarm = this.swarms.find(a => a.swarmId === mergableSwarmId)!;
+    let mergableSwarm = this.swarms.find((a) => a.swarmId === mergableSwarmId)!;
     while (true) {
       let merged = false;
       for (const swarm of this.swarms) {
@@ -361,7 +361,7 @@ export class ServerGame {
   }
 
   removeSwarm(swarmId: number) {
-    const index = this.swarms.findIndex(a => a.swarmId === swarmId);
+    const index = this.swarms.findIndex((a) => a.swarmId === swarmId);
     if (index === -1) {
       throw new Error('Bunko remove swarm');
     }
@@ -375,7 +375,7 @@ export class ServerGame {
   }
 
   killEmitter(emitterId: number) {
-    const emitter = this.emitters.find(a => a.emitterId === emitterId)!;
+    const emitter = this.emitters.find((a) => a.emitterId === emitterId)!;
     if (!emitter) {
       // debugger;
       throw new Error('Bunko');
@@ -390,7 +390,7 @@ export class ServerGame {
   }
 
   removeEmitter(emitterId: number) {
-    const emitterIndex = this.emitters.findIndex(a => a.emitterId === emitterId)!;
+    const emitterIndex = this.emitters.findIndex((a) => a.emitterId === emitterId)!;
     if (emitterIndex === -1) {
       throw new Error('Bunko remove emitter');
     }
@@ -419,7 +419,7 @@ export class ServerGame {
   private sendTeams() {
     this.sendMessageToClients({
       type: 'set-team-data',
-      teams: this.teams.map(c => ({
+      teams: this.teams.map((c) => ({
         teamId: c.teamId,
         color: c.color,
       })),
@@ -431,13 +431,13 @@ export class ServerGame {
       type: 'game-data',
       gameWidth: this.gameWidth,
       gameHeight: this.gameHeight,
-      teams: this.teams.map(c => ({
+      teams: this.teams.map((c) => ({
         teamId: c.teamId,
         color: c.color,
       })),
-      emitters: this.emitters.map(a =>
+      emitters: this.emitters.map((a) =>
         switchServerEmitter(a, {
-          dead: e => ({
+          dead: (e) => ({
             type: 'dead',
             life: e.life,
             duration: e.duration,
@@ -446,7 +446,7 @@ export class ServerGame {
             y: e.y,
             power: e.power,
           }),
-          dot: e => ({
+          dot: (e) => ({
             type: 'dot',
             teamId: e.teamId,
             emitterId: e.emitterId,
@@ -456,7 +456,7 @@ export class ServerGame {
           }),
         })
       ),
-      swarms: this.swarms.map(a => ({
+      swarms: this.swarms.map((a) => ({
         teamId: a.teamId,
         ownerEmitterId: a.ownerEmitterId,
         x: a.x,

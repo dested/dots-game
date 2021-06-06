@@ -29,7 +29,7 @@ export class ServerDotEmitter implements ServerEmitter {
 
   get mySwarm() {
     if (!this._mySwarm) {
-      this._mySwarm = this.game.swarms.find(a => a.ownerEmitterId === this.emitterId)!;
+      this._mySwarm = this.game.swarms.find((a) => a.ownerEmitterId === this.emitterId)!;
     }
     return this._mySwarm;
   }

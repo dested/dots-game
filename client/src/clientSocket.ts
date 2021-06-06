@@ -17,12 +17,12 @@ export class ClientSocket implements IClientSocket {
     this.socket.onopen = () => {
       options.onOpen();
     };
-    this.socket.onerror = e => {
+    this.socket.onerror = (e) => {
       console.log(e);
       this.socket?.close();
       options.onDisconnect();
     };
-    this.socket.onmessage = e => {
+    this.socket.onmessage = (e) => {
       if (GameConstants.binaryTransport) {
         options.onMessage(ServerToClientMessageParser.toServerToClientMessages(e.data));
       } else {

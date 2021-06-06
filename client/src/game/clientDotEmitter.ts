@@ -18,20 +18,20 @@ export class ClientDotEmitter implements ClientEmitter {
   tick() {}
 
   get radius() {
-    return this.game.swarms.find(a => a.ownerEmitterId === this.emitterId)!.radius;
+    return this.game.swarms.find((a) => a.ownerEmitterId === this.emitterId)!.radius;
   }
 
   draw(context: CanvasRenderingContext2D): void {
     context.save();
     context.strokeStyle = 'white';
     context.lineWidth = 3;
-    const team = this.game.teams.find(t => t.teamId === this.teamId);
+    const team = this.game.teams.find((t) => t.teamId === this.teamId);
     if (!team) {
       // debugger;
       throw new Error('bunkop team' + this.teamId);
     }
     context.fillStyle = team.color + 'aa';
-    const swarm = this.game.swarms.find(a => a.ownerEmitterId === this.emitterId);
+    const swarm = this.game.swarms.find((a) => a.ownerEmitterId === this.emitterId);
     if (!swarm) {
       // debugger;
       throw new Error('bunkop');

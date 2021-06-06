@@ -142,7 +142,7 @@ export class GameView {
       finish: scale,
       duration: 250,
       easing: AnimationUtils.easings.easeInCubic,
-      callback: c => {
+      callback: (c) => {
         this.setScale(c);
       },
     });
@@ -160,7 +160,7 @@ export class GameView {
       finish: 1,
       duration: 250,
       easing: AnimationUtils.easings.easeInCubic,
-      callback: c => {
+      callback: (c) => {
         this.setPosition(AnimationUtils.lerp(startX, endX, c), AnimationUtils.lerp(startY, endY, c));
       },
     });
