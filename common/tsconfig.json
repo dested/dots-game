@@ -1,23 +1,19 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "esnext",
-    "moduleResolution": "node",
+    "noEmitOnError": false,
+    "experimentalDecorators": true,
+    "allowUnreachableCode": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
+    "strict": true,
+    "target": "ES2019",
+    "module": "commonjs",
+    "emitDecoratorMetadata": true,
     "noEmit": true,
-    "jsx": "react"
+    "sourceMap": true,
+    "pretty": true,
+    "moduleResolution": "node",
+    "strictPropertyInitialization": false,
+    "allowSyntheticDefaultImports": true
   },
   "include": [
     "src"

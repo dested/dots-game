@@ -2,34 +2,25 @@
   "name": "dots-game-server",
   "version": "1.0.0",
   "scripts": {
-    "build": "rimraf dist && webpack --mode development",
-    "watch": "rimraf dist && webpack --mode development --watch",
+    "build": "esbuild ./src/index.ts --bundle --sourcemap --platform=node --external:ws --outfile=./dist/main.js && node ./dist/main.js",
     "nodemon": "nodemon",
-    "start": "node --expose-gc ./dist/index.js",
-    "debug": "node --expose-gc --inspect-brk ./dist/index.js",
-    "build-prod": "rimraf dist && webpack --mode production  --progress --hide-modules",
+    "start": "npm run build && node --expose-gc ./dist/index.js",
+    "debug": "npm run build && node --expose-gc --inspect-brk ./dist/index.js",
+    "build-prod": "rimraf dist && npm run build",
     "deploy": "yarn build-prod & eb deploy"
   },
   "dependencies": {
     "quickselect": "^2.0.0",
-    "ws": "^7.4.6"
+    "ws": "^8.16.0"
   },
   "devDependencies": {
-    "@types/node": "^15.12.1",
-    "@types/ws": "^7.4.4",
-    "@types/node-fetch": "^2.5.10",
-    "nodemon": "^2.0.7",
-    "prettier": "^2.3.1",
-    "ts-loader": "^9.2.3",
-    "ts-node": "^10.0.0",
-    "tslint": "^6.1.3",
-    "tslint-config-prettier": "^1.18.0",
-    "tslint-eslint-rules": "^5.4.0",
-    "tslint-plugin-prettier": "^2.3.0",
-    "typescript": "^4.3.2",
-    "uglifyjs-webpack-plugin": "^2.2.0",
-    "webpack": "^5.38.1",
-    "webpack-cli": "^4.7.0",
-    "zip-webpack-plugin": "4.0.1"
+    "@types/node": "^20.12.7",
+    "@types/ws": "^8.5.10",
+    "@types/node-fetch": "^2.6.11",
+    "nodemon": "^3.1.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5",
+    "esbuild": "0.19.8",
+    "esbuild-node-externals": "^1.11.0"
   }
 }

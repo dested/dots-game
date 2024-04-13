@@ -1,9 +1,9 @@
 import {Manager, Pan, Pinch, Press, Swipe, Tap} from 'hammerjs';
-import {GameConfig} from '../../../common/src/models/gameConfig';
-import {ClientToServerMessage, ServerToClientMessage} from '../../../common/src/models/messages';
-import {MathUtils} from '../../../common/src/utils/mathUtils';
-import {unreachable} from '../../../common/src/utils/unreachable';
-import {uuid} from '../../../common/src/utils/uuid';
+import {GameConfig} from '@common/models/gameConfig';
+import {ClientToServerMessage, ServerToClientMessage} from '@common/models/messages';
+import {MathUtils} from '@common/utils/mathUtils';
+import {unreachable} from '@common/utils/unreachable';
+import {uuid} from '@common/utils/uuid';
 import {ClientSocket, IClientSocket} from '../clientSocket';
 import {CanvasUtils} from '../utils/canvasUtils';
 import {ClientDeadEmitter} from './clientDeadEmitter';

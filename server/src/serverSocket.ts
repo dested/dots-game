@@ -1,9 +1,9 @@
 import WebSocket, {Server} from 'ws';
-import {GameConstants} from '../../common/src/game/gameConstants';
-import {ClientToServerMessage, ServerToClientMessage} from '../../common/src/models/messages';
-import {ClientToServerMessageParser} from '../../common/src/parsers/clientToServerMessageParser';
-import {ServerToClientMessageParser} from '../../common/src/parsers/serverToClientMessageParser';
-import {uuid} from '../../common/src/utils/uuid';
+import {GameConstants} from '@common/game/gameConstants';
+import {ClientToServerMessage, ServerToClientMessage} from '@common/models/messages';
+import {ClientToServerMessageParser} from '@common/parsers/clientToServerMessageParser';
+import {ServerToClientMessageParser} from '@common/parsers/serverToClientMessageParser';
+import {uuid} from '@common/utils/uuid';
 
 export class ServerSocket implements IServerSocket {
   wss?: Server;

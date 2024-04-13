@@ -1,4 +1,4 @@
-import {AnimationUtils} from '../../../common/src/utils/animationUtils';
+import {AnimationUtils} from '@common/utils/animationUtils';
 
 export class GameView {
   private x: number;

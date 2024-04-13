@@ -1,4 +1,4 @@
-import {GameConstants} from '../../../common/src/game/gameConstants';
+import {GameConstants} from '@common/game/gameConstants';
 import {RNode} from '../rbush';
 import {ServerEmitter} from './serverEmitter';
 import {ServerGame} from './serverGame';

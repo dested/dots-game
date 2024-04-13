@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {AnimationUtils} from '../../common/src/utils/animationUtils';
+import {AnimationUtils} from '@common/utils/animationUtils';
 import {ServerGame} from '../../server/src/game/serverGame';
 import './App.css';
 import {ClientGameUI} from './game/clientGameUI';
@@ -7,7 +7,7 @@ import {LocalClientSocket, LocalServerSocket} from './localServerMocking';
 import {BotClientGame} from '../../bot/src/botClientGame';
 import {ClientSocket} from './clientSocket';
 import {ClientGame} from './game/clientGame';
-import {Utils} from '../../common/src/utils/utils';
+import {Utils} from '@common/utils/utils';
 
 const BOTS = false;
 const App: React.FC<{width: number; height: number}> = (props) => {

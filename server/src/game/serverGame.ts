@@ -1,10 +1,10 @@
-import {GameConstants} from '../../../common/src/game/gameConstants';
-import {ClientToServerMessage, ServerToClientMessage} from '../../../common/src/models/messages';
-import {ColorUtils} from '../../../common/src/utils/colorUtils';
-import {MathUtils} from '../../../common/src/utils/mathUtils';
-import {unreachable} from '../../../common/src/utils/unreachable';
-import {Utils} from '../../../common/src/utils/utils';
-import {nextId, uuid} from '../../../common/src/utils/uuid';
+import {GameConstants} from '@common/game/gameConstants';
+import {ClientToServerMessage, ServerToClientMessage} from '@common/models/messages';
+import {ColorUtils} from '@common/utils/colorUtils';
+import {MathUtils} from '@common/utils/mathUtils';
+import {unreachable} from '@common/utils/unreachable';
+import {Utils} from '@common/utils/utils';
+import {nextId, uuid} from '@common/utils/uuid';
 import {RBush} from '../rbush';
 import {IServerSocket, ServerSocket} from '../serverSocket';
 import {ServerDeadEmitter} from './serverDeadEmitter';

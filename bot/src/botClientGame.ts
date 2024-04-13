@@ -1,11 +1,11 @@
-import {ClientDeadEmitter} from '../../client/src/game/clientDeadEmitter';
-import {ClientDotEmitter} from '../../client/src/game/clientDotEmitter';
-import {ClientDotSwarm} from '../../client/src/game/clientDotSwarm';
-import {ClientEmitter} from '../../client/src/game/clientEmitter';
-import {ClientGame} from '../../client/src/game/clientGame';
-import {GameConstants} from '../../common/src/game/gameConstants';
-import {MathUtils} from '../../common/src/utils/mathUtils';
-import {IClientSocket} from '../../client/src/clientSocket';
+import {ClientDeadEmitter} from '@client/game/clientDeadEmitter';
+import {ClientDotEmitter} from '@client/game/clientDotEmitter';
+import {ClientDotSwarm} from '@client/game/clientDotSwarm';
+import {ClientEmitter} from '@client/game/clientEmitter';
+import {ClientGame} from '@client/game/clientGame';
+import {GameConstants} from '@common/game/gameConstants';
+import {MathUtils} from '@common/utils/mathUtils';
+import {IClientSocket} from '@client/clientSocket';
 
 export class BotClientGame extends ClientGame {
   constructor(

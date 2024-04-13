@@ -1,5 +1,5 @@
-import {GameConstants} from '../../../common/src/game/gameConstants';
-import {ColorUtils} from '../../../common/src/utils/colorUtils';
+import {GameConstants} from '@common/game/gameConstants';
+import {ColorUtils} from '@common/utils/colorUtils';
 import {CanvasUtils} from '../utils/canvasUtils';
 import {ClientEmitter} from './clientEmitter';
 import {ClientGame} from './clientGame';

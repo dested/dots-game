@@ -1,4 +1,4 @@
-import {Emitter} from '../../../common/src/game/emitter';
+import {Emitter} from '@common/game/emitter';
 
 export interface ServerEmitter extends Emitter {
   serverTick(tickIndex: number): void;

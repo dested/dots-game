@@ -1,5 +1,5 @@
-import {BaseDeadEmitter} from '../../../common/src/game/baseDeadEmitter';
-import {GameConstants} from '../../../common/src/game/gameConstants';
+import {BaseDeadEmitter} from '@common/game/baseDeadEmitter';
+import {GameConstants} from '@common/game/gameConstants';
 import {RNode} from '../rbush';
 import {ServerEmitter} from './serverEmitter';
 import {ServerGame} from './serverGame';

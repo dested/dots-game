@@ -1,9 +1,9 @@
 import {w3cwebsocket} from 'websocket';
 (global as any).WebSocket = w3cwebsocket;
-import {ClientGame} from '../../client/src/game/clientGame';
-import {Utils} from '../../common/src/utils/utils';
+import {ClientGame} from '@client/game/clientGame';
+import {Utils} from '@common/utils/utils';
 import {BotClientGame} from './botClientGame';
-import {ClientSocket} from '../../client/src/clientSocket';
+import {ClientSocket} from '@client/clientSocket';
 
 console.log('started');
 

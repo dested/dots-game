@@ -1,8 +1,8 @@
-import {GameConstants} from '../../common/src/game/gameConstants';
-import {ClientToServerMessage, ServerToClientMessage} from '../../common/src/models/messages';
-import {ClientToServerMessageParser} from '../../common/src/parsers/clientToServerMessageParser';
-import {ServerToClientMessageParser} from '../../common/src/parsers/serverToClientMessageParser';
-import {Utils} from '../../common/src/utils/utils';
+import {GameConstants} from '@common/game/gameConstants';
+import {ClientToServerMessage, ServerToClientMessage} from '@common/models/messages';
+import {ClientToServerMessageParser} from '@common/parsers/clientToServerMessageParser';
+import {ServerToClientMessageParser} from '@common/parsers/serverToClientMessageParser';
+import {Utils} from '@common/utils/utils';
 
 export class ClientSocket implements IClientSocket {
   private socket?: WebSocket;

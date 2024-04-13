@@ -5,7 +5,7 @@
     "allowUnreachableCode": true,
     "resolveJsonModule": true,
     "strict": true,
-    "target": "es2017",
+    "target": "ES2019",
     "module": "commonjs",
     "emitDecoratorMetadata": true,
     "noEmit": true,
@@ -16,6 +16,9 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./src",
     "outDir": "./dist",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@common/*": ["../../common/src/*"],
+    }
   }
 }
